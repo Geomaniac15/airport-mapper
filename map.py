@@ -1,5 +1,23 @@
 from collections import deque
 
+class Node:
+    def __init__(self, name, exclusive=False):
+        self.name = name
+        self.exclusive = exclusive
+        self.occupied_by = None  # aircraft id or None
+    
+    def is_free(self):
+        return self.occupied_by is None
+    
+class Aircraft:
+    def __init__(self, aircraft_id, start_node, goal_node, path):
+        self.id = aircraft_id
+        self.current = start_node
+        self.goal = goal_node
+        self.path = path
+        self.path_index = 0
+        self.waiting = False
+
 graph = {
     # Stands
     'S1': ['I1'],
