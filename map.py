@@ -64,7 +64,7 @@ graph = {
 }
 
 nodes = {
-    name: Node(name, exclusive=(name in {'I3', 'I4', 'I5'}))
+    name: Node(name, exclusive=(name in {'I3', 'I4', 'I5', 'R1', 'R2'}))
     for name in graph
 }
 
@@ -122,6 +122,11 @@ def resolve_conflicts(proposals):
     approved = set()
 
     for node, requesters in node_requests.items():
+        # block entry if already occupied
+        # two aircraft cannot be on the runway at the same time
+        if node.exclusive and not node.is_free():
+            continue
+        
         if not node.exclusive:
             for ac in requesters:
                 approved.add(ac.id)
