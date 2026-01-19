@@ -46,28 +46,6 @@ class Aircraft:
         
         return self.path[self.path_index + 1]
 
-graph = {
-    # Stands
-    'S1': ['I1'],
-    'S2': ['I2'],
-
-    # Intersections
-    'I1': ['S1', 'I4', 'I3'],
-    'I2': ['S2', 'I5', 'I3'],
-    'I3': ['I1', 'I2', 'I4', 'I5'],
-    'I4': ['I1', 'I3', 'R1'],
-    'I5': ['I2', 'I3', 'R2'],
-
-    # Runway Access Points
-    'R1': ['I4'],
-    'R2': ['I5'],
-}
-
-nodes = {
-    name: Node(name, exclusive=(name in {'I3', 'I4', 'I5', 'R1', 'R2'}))
-    for name in graph
-}
-
 def bfs_path(graph, start, goal):
     # Queue of nodes to explore
     queue = deque([start])
@@ -145,6 +123,33 @@ def commit_moves(proposals, approved):
             next_node.occupied_by = ac.id
             ac.current = next_node
             ac.path_index += 1
+
+graph = {
+    # Stands
+    'S1': ['I1'],
+    'S2': ['I2'],
+
+    # Intersections
+    'I1': ['S1', 'I4', 'I3'],
+    'I2': ['S2', 'I5', 'I3'],
+    'I3': ['I1', 'I2', 'I4', 'I5'],
+    'I4': ['I1', 'I3', 'R1'],
+    'I5': ['I2', 'I3', 'R2'],
+
+    # Runway Access Points
+    'R1': ['I4', 'RWY'],
+    'R2': ['I5', 'RWY'],
+
+    # Runway
+    'RWY': ['R1', 'R2'],
+}
+
+exclusive_nodes = {'I3', 'I4', 'I5', 'R1', 'R2', 'RWY'}
+
+nodes = {
+    name: Node(name, exclusive=(name in exclusive_nodes))
+    for name in graph
+}
 
 path1 = bfs_path(graph, 'S1', 'R1')
 path2 = bfs_path(graph, 'S2', 'R1')
