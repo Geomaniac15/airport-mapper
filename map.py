@@ -1,10 +1,13 @@
-from collections import deque
+#  deque for FIFO queue, used for BFS
+#  defaultdict for grouping aircraft by requested node
+from collections import deque, defaultdict
 import time
 
 class Node:
+    # represents a place in the airport
     def __init__(self, name, exclusive=False):
         self.name = name
-        self.exclusive = exclusive
+        self.exclusive = exclusive  # only one aircraft may occupy this node at a time
         self.occupied_by = None  # aircraft id or None
     
     def is_free(self):
@@ -16,7 +19,7 @@ class Aircraft:
         self.current = start_node
         self.goal = goal_node
         self.path = path
-        self.path_index = 0
+        self.path_index = 0  # how far along the path it is
         self.waiting = False
 
     def step(self):
@@ -35,6 +38,13 @@ class Aircraft:
         self.current = next_node
         self.path_index += 1
         self.waiting = False
+
+    def propose_next(self):
+        # propose what node the aircraft wants next
+        if self.path_index + 1 >= len(self.path):
+            return None  # no move, already at goal
+        
+        return self.path[self.path_index + 1]
 
 graph = {
     # Stands
@@ -92,7 +102,46 @@ def bfs_path(graph, start, goal):
     path.reverse()
     return path
 
-path1 = bfs_path(graph, 'S1', 'R2')
+def collect_proposals(aircraft_list):
+    # where does each aircraft want to go
+    proposals = {}
+    for ac in aircraft_list:
+        next_node = ac.propose_next()
+        if next_node:
+            proposals[ac.id] = (ac, next_node)
+    return proposals
+
+def resolve_conflicts(proposals):
+    # who is allowed to move
+    node_requests = defaultdict(list)
+
+    # group requests by node
+    for ac, node in proposals.values():
+        node_requests[node].append(ac)
+    
+    approved = set()
+
+    for node, requesters in node_requests.items():
+        if not node.exclusive:
+            for ac in requesters:
+                approved.add(ac.id)
+        else:
+            # aircraft with lowest id wins
+            winner = sorted(requesters, key=lambda a: a.id)[0]
+            approved.add(winner.id)
+    
+    return approved
+
+def commit_moves(proposals, approved):
+    # execute moves
+    for ac_id, (ac, next_node) in proposals.items():
+        if ac_id in approved:
+            ac.current.occupied_by = None
+            next_node.occupied_by = ac.id
+            ac.current = next_node
+            ac.path_index += 1
+
+path1 = bfs_path(graph, 'S1', 'R1')
 path2 = bfs_path(graph, 'S2', 'R1')
 
 aircraft1 = Aircraft('A1', nodes['S1'], nodes['R1'], [nodes[n] for n in path1])
@@ -101,9 +150,13 @@ aircraft2 = Aircraft('A2', nodes['S2'], nodes['R2'], [nodes[n] for n in path2])
 nodes['S1'].occupied_by = 'A1'
 nodes['S2'].occupied_by = 'A2'
 
-for t in range(5):
-    aircraft1.step()
-    aircraft2.step()
+aircraft_list = [aircraft1, aircraft2]
+
+for t in range(6):
+    proposals = collect_proposals(aircraft_list)
+    approved = resolve_conflicts(proposals)
+    commit_moves(proposals, approved)
+
     print(f't={t}: A1 at {aircraft1.current.name}, A2 at {aircraft2.current.name}')
     time.sleep(0.75)
 
