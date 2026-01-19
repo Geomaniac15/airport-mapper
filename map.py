@@ -22,6 +22,7 @@ class Aircraft:
         self.path_index = 0  # how far along the path it is
         self.waiting = False
         self.done = False
+        self.removed = False
 
     def step(self):
         if self.path_index + 1 >= len(self.path):
@@ -88,6 +89,8 @@ def collect_proposals(aircraft_list):
     # where does each aircraft want to go
     proposals = {}
     for ac in aircraft_list:
+        if ac.removed:
+            continue
         next_node = ac.propose_next()
         if next_node:
             proposals[ac.id] = (ac, next_node)
@@ -136,6 +139,9 @@ def commit_moves(proposals, approved):
         if ac.current.name == 'RWY':
             ac.done = True
 
+def loc(ac):
+    return 'AIRBORNE' if ac.removed else ac.current.name
+
 graph = {
     # Stands
     'S1': ['I1'],
@@ -178,8 +184,9 @@ for t in range(6):
 
     # 1. cleanup phase (end-of-runway effects)
     for ac in aircraft_list:
-        if ac.done and ac.current.name == 'RWY':
+        if ac.done and not ac.removed:
             ac.current.occupied_by = None
+            ac.removed = True
             # to add: move ac off-map or mark as removed/taken off
 
     # 2. proposal phase   
@@ -192,7 +199,7 @@ for t in range(6):
     commit_moves(proposals, approved)
 
     # 5. observation
-    print(f't={t}: A1 at {aircraft1.current.name}, A2 at {aircraft2.current.name}')
+    print(f't={t}: A1 at {loc(aircraft1)}, A2 at {loc(aircraft2)}')
     time.sleep(0.75)
 
 # print(bfs_path(graph, 'S1', 'R2')) # Works
