@@ -18,6 +18,23 @@ class Aircraft:
         self.path_index = 0
         self.waiting = False
 
+    def step(self):
+        if self.path_index + 1 >= len(self.path):
+            return  # already at destination
+        
+        next_node = self.path[self.path_index + 1]
+
+        if next_node.exclusive and not next_node.is_free():
+            self.waiting = True
+            return
+        
+        # Move
+        self.current.occupied_by = None
+        next_node.occupied_by = self.id
+        self.current = next_node
+        self.path_index += 1
+        self.waiting = False
+
 graph = {
     # Stands
     'S1': ['I1'],
