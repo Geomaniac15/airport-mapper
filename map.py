@@ -1,4 +1,5 @@
 from collections import deque
+import time
 
 class Node:
     def __init__(self, name, exclusive=False):
@@ -104,6 +105,7 @@ for t in range(5):
     aircraft1.step()
     aircraft2.step()
     print(f't={t}: A1 at {aircraft1.current.name}, A2 at {aircraft2.current.name}')
+    time.sleep(0.75)
 
 # print(bfs_path(graph, 'S1', 'R2')) # Works
 # print(bfs_path(graph, 'S2', 'R2'))
