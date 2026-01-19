@@ -1,3 +1,5 @@
+from collections import deque
+
 graph = {
     # Stands
     'S1': ['I1'],
@@ -14,3 +16,40 @@ graph = {
     'R1': ['I4'],
     'R2': ['I5'],
 }
+
+def bfs_path(graph, start, goal):
+    # Queue of nodes to explore
+    queue = deque([start])
+
+    # Parent dict to reconstruct path
+    parent = {start: None}
+
+    while queue:
+        current = queue.popleft()
+
+        # Stop when goal is reached
+        if current == goal:
+            break
+
+        # Loop through all neighbours
+        for neighbour in graph[current]:
+            # Only visit each node once
+            if neighbour not in parent:
+                parent[neighbour] = current
+                queue.append(neighbour)
+    
+    if goal not in parent:
+        return None
+    
+    # Reconstruct path by walking backwards
+    path = []
+    node = goal
+    while node is not None:
+        path.append(node)
+        node = parent[node]
+    
+    path.reverse()
+    return path
+
+# print(bfs_path(graph, 'S1', 'R2')) # Works
+print(bfs_path(graph, 'S2', 'R2'))
