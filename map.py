@@ -52,6 +52,11 @@ graph = {
     'R2': ['I5'],
 }
 
+nodes = {
+    name: Node(name, exclusive=(name in {'I3', 'I4', 'I5'}))
+    for name in graph
+}
+
 def bfs_path(graph, start, goal):
     # Queue of nodes to explore
     queue = deque([start])
@@ -86,5 +91,19 @@ def bfs_path(graph, start, goal):
     path.reverse()
     return path
 
+path1 = bfs_path(graph, 'S1', 'R2')
+path2 = bfs_path(graph, 'S2', 'R1')
+
+aircraft1 = Aircraft('A1', nodes['S1'], nodes['R1'], [nodes[n] for n in path1])
+aircraft2 = Aircraft('A2', nodes['S2'], nodes['R2'], [nodes[n] for n in path2])
+
+nodes['S1'].occupied_by = 'A1'
+nodes['S2'].occupied_by = 'A2'
+
+for t in range(5):
+    aircraft1.step()
+    aircraft2.step()
+    print(f't={t}: A1 at {aircraft1.current.name}, A2 at {aircraft2.current.name}')
+
 # print(bfs_path(graph, 'S1', 'R2')) # Works
-print(bfs_path(graph, 'S2', 'R2'))
+# print(bfs_path(graph, 'S2', 'R2'))
