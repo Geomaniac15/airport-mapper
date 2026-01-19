@@ -21,6 +21,7 @@ class Aircraft:
         self.path = path
         self.path_index = 0  # how far along the path it is
         self.waiting = False
+        self.done = False
 
     def step(self):
         if self.path_index + 1 >= len(self.path):
@@ -41,6 +42,9 @@ class Aircraft:
 
     def propose_next(self):
         # propose what node the aircraft wants next
+        if self.done:
+            return None
+        
         if self.path_index + 1 >= len(self.path):
             return None  # no move, already at goal
         
@@ -106,6 +110,7 @@ def resolve_conflicts(proposals):
             continue
         
         if not node.exclusive:
+            # everyone can go
             for ac in requesters:
                 approved.add(ac.id)
         else:
@@ -118,11 +123,18 @@ def resolve_conflicts(proposals):
 def commit_moves(proposals, approved):
     # execute moves
     for ac_id, (ac, next_node) in proposals.items():
+        if ac_id not in approved:
+            continue
+
+        # move
         if ac_id in approved:
             ac.current.occupied_by = None
             next_node.occupied_by = ac.id
             ac.current = next_node
             ac.path_index += 1
+        
+        if ac.current.name == 'RWY':
+            ac.done = True
 
 graph = {
     # Stands
@@ -151,8 +163,8 @@ nodes = {
     for name in graph
 }
 
-path1 = bfs_path(graph, 'S1', 'R1')
-path2 = bfs_path(graph, 'S2', 'R1')
+path1 = bfs_path(graph, 'S1', 'RWY')
+path2 = bfs_path(graph, 'S2', 'RWY')
 
 aircraft1 = Aircraft('A1', nodes['S1'], nodes['R1'], [nodes[n] for n in path1])
 aircraft2 = Aircraft('A2', nodes['S2'], nodes['R2'], [nodes[n] for n in path2])
@@ -163,10 +175,23 @@ nodes['S2'].occupied_by = 'A2'
 aircraft_list = [aircraft1, aircraft2]
 
 for t in range(6):
+
+    # 1. cleanup phase (end-of-runway effects)
+    for ac in aircraft_list:
+        if ac.done and ac.current.name == 'RWY':
+            ac.current.occupied_by = None
+            # to add: move ac off-map or mark as removed/taken off
+
+    # 2. proposal phase   
     proposals = collect_proposals(aircraft_list)
+
+    # 3. conflict resolution phase
     approved = resolve_conflicts(proposals)
+
+    # 4. commit moves phase
     commit_moves(proposals, approved)
 
+    # 5. observation
     print(f't={t}: A1 at {aircraft1.current.name}, A2 at {aircraft2.current.name}')
     time.sleep(0.75)
 
