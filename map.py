@@ -130,11 +130,10 @@ def commit_moves(proposals, approved):
             continue
 
         # move
-        if ac_id in approved:
-            ac.current.occupied_by = None
-            next_node.occupied_by = ac.id
-            ac.current = next_node
-            ac.path_index += 1
+        ac.current.occupied_by = None
+        next_node.occupied_by = ac.id
+        ac.current = next_node
+        ac.path_index += 1 
         
         if ac.current.name == 'RWY':
             ac.done = True
@@ -162,23 +161,54 @@ graph = {
     'RWY': ['R1', 'R2'],
 }
 
-exclusive_nodes = {'I3', 'I4', 'I5', 'R1', 'R2', 'RWY'}
+exclusive_nodes = {'I1','I2', 'I3', 'I4', 'I5', 'R1', 'R2', 'RWY'}
 
 nodes = {
     name: Node(name, exclusive=(name in exclusive_nodes))
     for name in graph
 }
 
-path1 = bfs_path(graph, 'S1', 'RWY')
-path2 = bfs_path(graph, 'S2', 'RWY')
+SCENARIO = [
+    { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'S2' },
+    { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'S1' },
+]
 
-aircraft1 = Aircraft('A1', nodes['S1'], nodes['R1'], [nodes[n] for n in path1])
-aircraft2 = Aircraft('A2', nodes['S2'], nodes['R2'], [nodes[n] for n in path2])
+aircraft_list = []
 
-nodes['S1'].occupied_by = 'A1'
-nodes['S2'].occupied_by = 'A2'
+for spec in SCENARIO:
+    start = spec['start']
+    goal = spec['goal']
 
-aircraft_list = [aircraft1, aircraft2]
+    path = bfs_path(graph, start, goal)
+    if path is None:
+        raise ValueError(f"No path for {spec['aircraft_id']} from {start} to {goal}")
+
+    ac = Aircraft(
+        spec['aircraft_id'],
+        nodes[start],
+        nodes[goal],
+        [nodes[n] for n in path]
+    )
+
+    ac.current.occupied_by = ac.id
+    aircraft_list.append(ac)
+
+occupied = set()
+for ac in aircraft_list:
+    if ac.current.name in occupied:
+        raise ValueError(f'Node {ac.current.name} occupied by multiple aircraft at start')
+    occupied.add(ac.current.name)
+
+# path1 = bfs_path(graph, aircraft_starting_positions['S1'], 'RWY')
+# path2 = bfs_path(graph, aircraft_starting_positions['S2'], 'RWY')
+
+# aircraft1 = Aircraft('A1', nodes['RWY'], nodes['S1'], [nodes[n] for n in path1])
+# aircraft2 = Aircraft('A2', nodes['RWY'], nodes['S2'], [nodes[n] for n in path2])
+
+# nodes['S1'].occupied_by = 'A1'
+# nodes['S2'].occupied_by = 'A2'
+
+# aircraft_list = [aircraft1, aircraft2]
 
 for t in range(6):
 
@@ -199,7 +229,13 @@ for t in range(6):
     commit_moves(proposals, approved)
 
     # 5. observation
-    print(f't={t}: A1 at {loc(aircraft1)}, A2 at {loc(aircraft2)}')
+    #print(f't={t}: A1 at {loc(aircraft1)}, A2 at {loc(aircraft2)}')
+    
+    print(f"t={t}: " +
+          ", ".join(
+              f"{ac.id} at {loc(ac)}" for ac in aircraft_list)
+          )
+
     time.sleep(0.75)
 
 # print(bfs_path(graph, 'S1', 'R2')) # Works
