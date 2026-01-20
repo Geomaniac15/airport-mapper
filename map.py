@@ -210,7 +210,10 @@ for ac in aircraft_list:
 
 # aircraft_list = [aircraft1, aircraft2]
 
-for t in range(6):
+no_progress_steps = 0
+
+for t in range(100):
+    moved_this_step = False
 
     # 1. cleanup phase (end-of-runway effects)
     for ac in aircraft_list:
@@ -225,10 +228,23 @@ for t in range(6):
     # 3. conflict resolution phase
     approved = resolve_conflicts(proposals)
 
+    if approved:
+        moved_this_step = True
+    
+
     # 4. commit moves phase
     commit_moves(proposals, approved)
 
-    # 5. observation
+    # 5. check for deadlock
+    if not moved_this_step:
+        no_progress_steps += 1
+        if no_progress_steps >= 3:
+            print("Deadlock detected, stopping simulation.")
+            break
+    else:
+        no_progress_steps = 0
+
+    # 6. observation
     #print(f't={t}: A1 at {loc(aircraft1)}, A2 at {loc(aircraft2)}')
     
     print(f"t={t}: " +
@@ -236,7 +252,7 @@ for t in range(6):
               f"{ac.id} at {loc(ac)}" for ac in aircraft_list)
           )
 
-    time.sleep(0.75)
+    # time.sleep(0.75)
 
 # print(bfs_path(graph, 'S1', 'R2')) # Works
 # print(bfs_path(graph, 'S2', 'R2'))
