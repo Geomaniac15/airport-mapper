@@ -132,11 +132,24 @@ def resolve_conflicts(proposals):
     eligible = []
 
     # group requests by node
-    for ac, node, corridor in proposals.values():
-        # corridor must be clear to even be considered
-        if not corridor_is_clear(corridor):
-            continue
-        node_requests[node].append(ac)
+    for ac, next_node, corridor in proposals.values():
+        if corridor_is_clear(corridor):
+            eligible.append((ac, next_node))
+
+        # normal case: at least one aircraft eligible
+        if eligible:
+            for ac, next_node in eligible:
+                node_requests[next_node].append(ac)
+        else:
+            # escape hatch: one aircfraft can go
+            # its next node must be free tho
+            candidates = []
+            for ac, next_node, _corridor in proposals.values():
+                if (not next_node.exclusive) or next_node.is_free():
+                    candidates.append((ac, next_node))
+            if candidates:
+                ac, next_node = sorted(candidates, key=lambda x: x[0].id)[0]
+                node_requests[next_node].append(ac)
     
     approved = set()
 
