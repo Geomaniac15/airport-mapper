@@ -23,6 +23,7 @@ class Aircraft:
         self.waiting = False
         self.done = False
         self.removed = False
+        self.lookahead = 3  # how many nodes ahead to consider for corridor proposal
 
     def step(self):
         if self.path_index + 1 >= len(self.path):
@@ -50,6 +51,30 @@ class Aircraft:
             return None  # no move, already at goal
         
         return self.path[self.path_index + 1]
+    
+    def propose_corridor(self, k=None):
+        # return a list of nodes representing the corridor the aircraft wants to reserve
+
+        if self.done or self.removed:
+            return None
+        
+        if k is None:
+            k = self.lookahead
+        
+        # next nodes along the path (skips current node)
+        start = self.path_index + 1
+        end = min(start + k, len(self.path))
+
+        corridor = self.path[start:end]
+        return corridor if corridor else None
+
+def corridor_is_clear(corridor):
+    if corridor is None:
+        return True
+    for node in corridor:
+        if node.exclusive and not node.is_free():
+            return False
+    return True
 
 def bfs_path(graph, start, goal):
     # Queue of nodes to explore
@@ -92,16 +117,25 @@ def collect_proposals(aircraft_list):
         if ac.removed:
             continue
         next_node = ac.propose_next()
+        corridor = ac.propose_corridor()
         if next_node:
-            proposals[ac.id] = (ac, next_node)
+            proposals[ac.id] = (ac, next_node, corridor)
+    
+    # print("Proposals:", {ac_id: node.name for ac_id, (ac, node) in proposals.items()})
     return proposals
 
 def resolve_conflicts(proposals):
     # who is allowed to move
     node_requests = defaultdict(list)
 
+    # eligible to move?
+    eligible = []
+
     # group requests by node
-    for ac, node in proposals.values():
+    for ac, node, corridor in proposals.values():
+        # corridor must be clear to even be considered
+        if not corridor_is_clear(corridor):
+            continue
         node_requests[node].append(ac)
     
     approved = set()
@@ -125,7 +159,7 @@ def resolve_conflicts(proposals):
 
 def commit_moves(proposals, approved):
     # execute moves
-    for ac_id, (ac, next_node) in proposals.items():
+    for ac_id, (ac, next_node, _corridor) in proposals.items():
         if ac_id not in approved:
             continue
 
