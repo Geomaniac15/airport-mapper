@@ -220,8 +220,8 @@ graph = {
     'S2': ['I2'],
 
     # Intersections
-    'I1': ['S1', 'I3'],
-    'I2': ['S2', 'I5'],
+    'I1': ['S1', 'I3', 'I4'],
+    'I2': ['S2', 'I3', 'I5'],
     'I3': ['I1', 'I2', 'I4', 'I5'],
     'I4': ['I1', 'I3', 'R1'],
     'I5': ['I2', 'I3', 'R2'],
@@ -289,10 +289,10 @@ for t in range(100):
     moved_this_step = False
 
     # 0. debug for proposal and lookahead functionality
-    if ac.removed:
-        continue
-    nxt = ac.propose_next()
-    corridor = ac.propose_corridor(2)  # force lookahead of 2
+    # if ac.removed:
+    #     continue
+    # nxt = ac.propose_next()
+    # corridor = ac.propose_corridor(2)  # force lookahead of 2
     # for ac in aircraft_list:
     #     print(ac.id, 'at', ac.current.name,
     #         '\nnext:', (nxt.name if nxt else None),
@@ -337,10 +337,6 @@ for t in range(100):
     #             f'{ac.id} mismatch: current={ac.current.name} path_index={ac.path_index} path_node={ac.path[ac.path_index].name}'
     #         )
 
-    if all(ac.propose_next() is None or ac.removed for ac in aircraft_list):
-        print("All aircraft finished. Stopping simulation.")
-        break
-
 
     # 5. check for deadlock
     if not moved_this_step:
@@ -358,6 +354,10 @@ for t in range(100):
           ", ".join(
               f"{ac.id} at {loc(ac)}" for ac in aircraft_list)
           )
+    
+    if all(ac.removed for ac in aircraft_list):
+        print("All aircraft finished. Stopping simulation.")
+        break
 
     # time.sleep(0.75)
 
