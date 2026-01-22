@@ -24,6 +24,7 @@ class Aircraft:
         self.done = False
         self.removed = False
         self.lookahead = 3  # how many nodes ahead to consider for corridor proposal
+        self.wait_ticks = 0  # how many consecutive ticks the aircraft has been waiting
 
     def step(self):
         if self.path_index + 1 >= len(self.path):
@@ -141,7 +142,7 @@ def resolve_conflicts(proposals):
             for ac, next_node in eligible:
                 node_requests[next_node].append(ac)
         else:
-            # escape hatch: one aircfraft can go
+            # escape hatch: one aircraft can go
             # its next node must be free tho
             candidates = []
             for ac, next_node, _corridor in proposals.values():
@@ -165,7 +166,10 @@ def resolve_conflicts(proposals):
                 approved.add(ac.id)
         else:
             # aircraft with lowest id wins
-            winner = sorted(requesters, key=lambda a: a.id)[0]
+            winner = sorted(
+                requesters, 
+                key=lambda a: (-a.wait_ticks, a.id)  # prioritise longest waiting, then lowest id
+                )[0]
             approved.add(winner.id)
     
     return approved
@@ -184,6 +188,28 @@ def commit_moves(proposals, approved):
         
         if ac.current.name == 'RWY':
             ac.done = True
+
+def is_blocked(ac, approved):
+    if ac.removed or ac.done:
+        return False
+    if ac.propose_next() is None:
+        return False
+    return ac.id not in approved
+
+def block_reason(ac, appproved, lookahead=3):
+    if ac.removed or ac.done:
+        return 'DONE'
+    next = ac.propose_next()
+    if next is None:
+        return 'NO_MOVE'
+    if ac.id in appproved:
+        return 'MOVED'
+    if next.exclusive and not next.is_free():
+        return f'NEXT_OCCUPIED({next.name})'
+    corridor = ac.propose_corridor(lookahead)
+    if corridor and any(n.exclusive and not n.is_free() for n in corridor):
+        return 'CORRIDOR_BLOCKED'
+    return 'PRIORITY_BLOCKED'
 
 def loc(ac):
     return 'AIRBORNE' if ac.removed else ac.current.name
@@ -288,9 +314,20 @@ for t in range(100):
     if approved:
         moved_this_step = True
     
+    # track wait times
+    for ac in aircraft_list:
+        if is_blocked(ac, approved):
+            ac.wait_ticks += 1
+        else:
+            ac.wait_ticks = 0
 
     # 4. commit moves phase
     commit_moves(proposals, approved)
+
+    for ac in aircraft_list:
+        if is_blocked(ac, approved):
+            reason = block_reason(ac, approved)
+            print(f'{ac.id} condition: {reason}, wait_ticks: {ac.wait_ticks}')
 
     # for ac in aircraft_list:
     #     if ac.removed:
