@@ -63,7 +63,7 @@ class Aircraft:
         
         # next nodes along the path (skips current node)
         start = self.path_index + 1
-        end = min(start + k, len(self.path))
+        end = start + k
 
         corridor = self.path[start:end]
         return corridor if corridor else None
@@ -194,8 +194,8 @@ graph = {
     'S2': ['I2'],
 
     # Intersections
-    'I1': ['S1', 'I4', 'I3'],
-    'I2': ['S2', 'I5', 'I3'],
+    'I1': ['S1', 'I3'],
+    'I2': ['S2', 'I5'],
     'I3': ['I1', 'I2', 'I4', 'I5'],
     'I4': ['I1', 'I3', 'R1'],
     'I5': ['I2', 'I3', 'R2'],
@@ -262,6 +262,16 @@ no_progress_steps = 0
 for t in range(100):
     moved_this_step = False
 
+    # 0. debug for proposal and lookahead functionality
+    if ac.removed:
+        continue
+    nxt = ac.propose_next()
+    corridor = ac.propose_corridor(2)  # force lookahead of 2
+    # for ac in aircraft_list:
+    #     print(ac.id, 'at', ac.current.name,
+    #         '\nnext:', (nxt.name if nxt else None),
+    #         '\ncorridor:', [n.name for n in corridor] if corridor else None)
+
     # 1. cleanup phase (end-of-runway effects)
     for ac in aircraft_list:
         if ac.done and not ac.removed:
@@ -281,6 +291,19 @@ for t in range(100):
 
     # 4. commit moves phase
     commit_moves(proposals, approved)
+
+    # for ac in aircraft_list:
+    #     if ac.removed:
+    #         continue
+    #     if ac.current is not ac.path[ac.path_index]:
+    #         raise RuntimeError(
+    #             f'{ac.id} mismatch: current={ac.current.name} path_index={ac.path_index} path_node={ac.path[ac.path_index].name}'
+    #         )
+
+    if all(ac.propose_next() is None or ac.removed for ac in aircraft_list):
+        print("All aircraft finished. Stopping simulation.")
+        break
+
 
     # 5. check for deadlock
     if not moved_this_step:
