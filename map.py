@@ -242,8 +242,8 @@ nodes = {
 }
 
 SCENARIO = [
-    { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'S2' },
-    { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'S1' },
+    { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'RWY' },
+    { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'RWY' },
 ]
 
 aircraft_list = []
