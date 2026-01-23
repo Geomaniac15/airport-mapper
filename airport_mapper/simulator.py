@@ -3,21 +3,78 @@
 from collections import deque, defaultdict
 import time
 
-from models import Node, Aircraft
-from graph import graph, exclusive_nodes, draw_graph
-from planning import bfs_path, corridor_is_clear, collect_proposals
-from rules import is_blocked, block_reason, resolve_conflicts, commit_moves
-from scenarios import SCENARIOS, scenario_names
+from airport_mapper.models import Node, Aircraft
+from airport_mapper.graph import graph, exclusive_nodes, draw_graph
+from airport_mapper.planning import bfs_path, corridor_is_clear, collect_proposals
+from airport_mapper.rules import is_blocked, block_reason, resolve_conflicts, commit_moves
+from airport_mapper.scenarios import SCENARIOS, scenario_names
 
 
 def loc(ac):
     return 'AIRBORNE' if ac.removed else ac.current.name
 
-
-
-
 def build_nodes():
     return {name: Node(name, exclusive=(name in exclusive_nodes)) for name in graph}
+
+def run_scenario(
+    scenario,
+    max_steps=200,
+):
+    aircraft_list = []
+    nodes = build_nodes()
+
+    for spec in scenario:
+        start = spec['start']
+        goal = spec['goal']
+
+        path = bfs_path(graph, start, goal)
+        if path is None:
+            raise ValueError(f"No path for {spec['aircraft_id']} from {start} to {goal}")
+
+        ac = Aircraft(spec['aircraft_id'], None, None, [nodes[n] for n in path])
+
+        ac.path_index = 0
+        ac.current = ac.path[0]
+        ac.goal = ac.path[-1].name
+        ac.current.occupied_by = ac.id
+
+        aircraft_list.append(ac)
+
+    no_progress = 0
+    deadlock = False
+
+    for t in range(max_steps):
+        for ac in aircraft_list:
+            if ac.done and not ac.removed:
+                ac.current.occupied_by = None
+                ac.removed = True
+        
+        proposals = collect_proposals(aircraft_list)
+        approved = resolve_conflicts(proposals)
+
+        moved = commit_moves(proposals, approved)
+
+        if moved:
+            no_progress = 0
+        else:
+            no_progress += 1
+            if no_progress >= 3:
+                deadlock = True
+                break
+        
+        if not approved:
+            deadlock = True
+            break
+
+        if all(ac.removed for ac in aircraft_list):
+            break
+    
+    return {
+        'aircraft': aircraft_list,
+        'deadlock': deadlock,
+        'steps': t,
+    }
+
 
 # draw_graph(graph)
 
@@ -166,6 +223,7 @@ def main_sim(SCENARIO):
 
     # print(bfs_path(graph, 'S1', 'R2')) # Works
     # print(bfs_path(graph, 'S2', 'R2'))
+
 
 
 if __name__ == "__main__":

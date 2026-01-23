@@ -1,5 +1,5 @@
 from collections import defaultdict
-from planning import corridor_is_clear, collect_proposals
+from airport_mapper.planning import corridor_is_clear, collect_proposals
 
 def resolve_conflicts(proposals):
     # who is allowed to move
