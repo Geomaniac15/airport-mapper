@@ -120,6 +120,30 @@ def run_scenario(
         'history': history,
     }
 
+def compute_metrics(result):
+    history = result['history']
+    metrics = {
+        'deadlock': result['deadlock'],
+        'steps': result['steps'],
+        'aircraft': {},
+    }
+
+    for a_id, positions in history['positions'].items():
+        waits = history['wait_ticks'][a_id]
+
+        time_to_airborne = next(
+            (t for t, p in enumerate(positions) if p == 'AIRBORNE'),
+            None
+        )
+
+        metrics['aircraft'][a_id] = {
+            'time_to_airborne': time_to_airborne,
+            'total_blocked_ticks': sum(1 for w in waits if w > 0),
+            'max_wait_ticks': max(waits) if waits else 0,
+        }
+
+    return metrics
+
 def print_events(history, limit=None):
     events = history['events'][:limit]
     for e in events:
@@ -157,6 +181,8 @@ if __name__ == "__main__":
     for scenario_name in scenario_names:
         print(f"Running scenario: {scenario_name}")
         result = run_scenario(SCENARIOS[scenario_name])
+        metrics = compute_metrics(result)
+        print(metrics)
         if 'A1' in [ac.id for ac in result['aircraft']]:
             print_timeline(result['history'], 'A1')
             print("\n")
