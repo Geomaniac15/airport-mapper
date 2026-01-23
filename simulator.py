@@ -43,7 +43,7 @@ def main_sim(SCENARIO):
 
         ac.path_index = 0
         ac.current = ac.path[0]
-        ac.goal = ac.path[0]
+        ac.goal = ac.path[-1].name
         ac.current.occupied_by = ac.id
         
         aircraft_list.append(ac)
@@ -102,31 +102,20 @@ def main_sim(SCENARIO):
         # 3. conflict resolution phase
         approved = resolve_conflicts(proposals)
 
-        if approved:
-            moved_this_step = commit_moves(proposals, approved)  # reset each step
-        
-        # track wait times
-        for ac in aircraft_list:
-            if is_blocked(ac, approved):
-                ac.wait_ticks += 1
-            else:
-                ac.wait_ticks = 0
-            # print(f'{ac.id} wait_ticks: {ac.wait_ticks}')
-
         # 4. commit moves phase
-        commit_moves(proposals, approved)
+        moved_this_step = commit_moves(proposals, approved)
 
         # sanity check for a1 cause this is driving me insane
         a1 = proposals.get('A1')
         if a1:
             ac, next_node, corridor = a1
-            print(f'''A1 debug:
-                  Current: {ac.current.name}
-                  path_index: {ac.path_index}
-                  path_node: {ac.path[ac.path_index].name}
-                  next_node: {next_node.name}
-                  expected_next: {ac.path[ac.path_index + 1].name if ac.path_index + 1 < len(ac.path) else None}
-                  corridor: {[n.name for n in corridor] if corridor else None}''')
+            # print(f'''A1 debug:
+            #       Current: {ac.current.name}
+            #       path_index: {ac.path_index}
+            #       path_node: {ac.path[ac.path_index].name}
+            #       next_node: {next_node.name}
+            #       expected_next: {ac.path[ac.path_index + 1].name if ac.path_index + 1 < len(ac.path) else None}
+            #       corridor: {[n.name for n in corridor] if corridor else None}''')
 
         for ac in aircraft_list:
             if ac.removed:
