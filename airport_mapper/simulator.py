@@ -2,6 +2,7 @@
 #  defaultdict for grouping aircraft by requested node
 from collections import deque, defaultdict
 import time
+import matplotlib.pyplot as plt
 
 from airport_mapper.models import Node, Aircraft
 from airport_mapper.graph import graph, exclusive_nodes, draw_graph
@@ -43,6 +44,12 @@ def run_scenario(
     no_progress = 0
     deadlock = False
 
+    history = {
+        'positions': {ac.id: [] for ac in aircraft_list},
+        'wait_ticks': {ac.id: [] for ac in aircraft_list},
+        'events': [],
+    }
+
     for t in range(max_steps):
         for ac in aircraft_list:
             if ac.done and not ac.removed:
@@ -52,11 +59,44 @@ def run_scenario(
         proposals = collect_proposals(aircraft_list)
         approved = resolve_conflicts(proposals)
 
+        for ac in aircraft_list:
+            if ac.removed or ac.done:
+                ac.wait_ticks = 0
+                continue
+            
+            if ac.propose_next() is None:
+                ac.wait_ticks = 0
+                continue
+
+            if ac.id in approved:
+                ac.wait_ticks = 0
+            else:
+                ac.wait_ticks += 1
+
         moved = commit_moves(proposals, approved)
 
+        event = {
+            't': t,
+            'moved': [],
+            'blocked': {},
+        }
+
         for ac in aircraft_list:
+            history['positions'][ac.id].append(loc(ac))
+            history['wait_ticks'][ac.id].append(ac.wait_ticks)
+
+            if ac.id in approved:
+                event['moved'].append(ac.id)
+            elif is_blocked(ac, approved):
+                reason = block_reason(ac, approved)
+                event['blocked'][ac.id] = reason
+
             if not ac.done and ac.current is ac.goal:
                 ac.done = True
+
+        if event['moved'] or event['blocked']:
+            history['events'].append(event)
+        
 
         if moved:
             no_progress = 0
@@ -77,8 +117,30 @@ def run_scenario(
         'aircraft': aircraft_list,
         'deadlock': deadlock,
         'steps': t,
+        'history': history,
     }
 
+def print_events(history, limit=None):
+    events = history['events'][:limit]
+    for e in events:
+        moved = ",".join(e['moved'])
+        blocked = ", ".join(f"{k}:{v}" for k,v in e['blocked'].items())
+        print(f"t={e['t']:>3} | moved=[{moved}] | blocked=[{blocked}]")
+
+def print_timeline(history, aircraft_id):
+    for t, pos in enumerate(history['positions'][aircraft_id]):
+        print(f't={t:>3}: {aircraft_id} at {pos}')
+
+def plot_wait_ticks(history):
+    ticks = range(len(next(iter(history['wait_ticks'].values()))))
+
+    for ac_id, wait_list in history['wait_ticks'].items():
+        plt.plot(ticks, wait_list, label=ac_id)
+    
+    plt.xlabel('Time Step')
+    plt.ylabel('Wait Ticks')
+    plt.legend()
+    plt.show()
 
 # draw_graph(graph)
 
@@ -231,8 +293,15 @@ def main_sim(SCENARIO):
 
 
 if __name__ == "__main__":
-    # main_sim(SCENARIOS['simple_departures'])
-    for scenario_name in scenario_names:
-        print(f"Running scenario: {scenario_name}")
-        main_sim(SCENARIOS[scenario_name])
-        print("\n")
+    result = run_scenario(SCENARIOS['simple_departures'])
+    print_events(result['history'], limit=30)
+    print('\n')
+    print_timeline(result['history'], 'A1')
+    print('\n')
+    plot_wait_ticks(result['history'])
+
+
+    # for scenario_name in scenario_names:
+    #     print(f"Running scenario: {scenario_name}")
+    #     main_sim(SCENARIOS[scenario_name])
+    #     print("\n")
