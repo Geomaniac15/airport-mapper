@@ -70,8 +70,10 @@ def commit_moves(proposals, approved):
     # execute moves
 
     # proposals: ac_id -> (ac, next_node, corridor)
-    movers = [(ac, next_node) for ac_id, (ac, next_node, _corridor) in proposals.items()
-               if ac_id in approved]
+    movers = []
+    for ac_id, (ac, next_node, _corridor) in proposals.items():
+        if ac_id in approved:
+            movers.append((ac, next_node))
 
     if not movers:
         return False
@@ -92,9 +94,18 @@ def commit_moves(proposals, approved):
         
         next_node.occupied_by = ac.id
         ac.current = next_node
+
+        if ac.path_index >= len(ac.path):
+            raise RuntimeError(f'{ac.id} tried to step beyond end of path')
         ac.path_index += 1 
         
-        if ac.current.name == 'RWY':
+        # if ac.current is not ac.path[ac.path_index]:
+        #     raise RuntimeError(
+        #         f'{ac.id} mismatch after move commit: current={ac.current.name} '
+        #         f'path_index={ac.path_index} expected={ac.path[ac.path_index].name}'
+        #     )
+
+        if ac.current.name == ac.goal:
             ac.done = True
     
     return True

@@ -33,15 +33,23 @@ def main_sim(SCENARIO):
         if path is None:
             raise ValueError(f"No path for {spec['aircraft_id']} from {start} to {goal}")
 
-        ac = Aircraft(
-            spec['aircraft_id'],
-            nodes[start],
-            nodes[goal],
-            [nodes[n] for n in path]
-        )
+        # ac = Aircraft(
+        #     spec['aircraft_id'],
+        #     nodes[start],
+        #     nodes[goal],
+        #     [nodes[n] for n in path]
+        # )
+        ac = Aircraft(spec['aircraft_id'], None, None, [nodes[n] for n in path])
 
+        ac.path_index = 0
+        ac.current = ac.path[0]
+        ac.goal = ac.path[0]
         ac.current.occupied_by = ac.id
+        
         aircraft_list.append(ac)
+
+    print(spec['aircraft_id'], 'path:', ' -> '.join(path))
+    assert path[-1] == goal, f'{spec["aircraft_id"]} path ends at {path[-1]}  not {goal}'
 
     occupied = set()
     for ac in aircraft_list:
@@ -62,7 +70,7 @@ def main_sim(SCENARIO):
 
     no_progress_steps = 0
 
-    for t in range(100):
+    for t in range(10):
 
         # 0. debug for proposal and lookahead functionality
         # if ac.removed:
@@ -81,8 +89,15 @@ def main_sim(SCENARIO):
                 ac.removed = True
                 # to add: move ac off-map or mark as removed/taken off
 
+        for ac in aircraft_list:
+            if ac.removed:
+                assert ac.current.occupied_by is None, f"{ac.id} removed but still occupying {ac.current.name}"
+            
+
         # 2. proposal phase   
         proposals = collect_proposals(aircraft_list)
+
+        print('RWY occupied by:', nodes['RWY'].occupied_by)
 
         # 3. conflict resolution phase
         approved = resolve_conflicts(proposals)
@@ -96,14 +111,37 @@ def main_sim(SCENARIO):
                 ac.wait_ticks += 1
             else:
                 ac.wait_ticks = 0
+            # print(f'{ac.id} wait_ticks: {ac.wait_ticks}')
 
         # 4. commit moves phase
         commit_moves(proposals, approved)
 
+        # sanity check for a1 cause this is driving me insane
+        a1 = proposals.get('A1')
+        if a1:
+            ac, next_node, corridor = a1
+            print(f'''A1 debug:
+                  Current: {ac.current.name}
+                  path_index: {ac.path_index}
+                  path_node: {ac.path[ac.path_index].name}
+                  next_node: {next_node.name}
+                  expected_next: {ac.path[ac.path_index + 1].name if ac.path_index + 1 < len(ac.path) else None}
+                  corridor: {[n.name for n in corridor] if corridor else None}''')
+
         for ac in aircraft_list:
-            if is_blocked(ac, approved):
-                reason = block_reason(ac, approved)
-                print(f'{ac.id} condition: {reason}, wait_ticks: {ac.wait_ticks}')
+            if ac.removed:
+                continue
+            expected = ac.path[ac.path_index]
+            if ac.current is not expected:
+                raise RuntimeError(
+                    f'{ac.id} mismatch after move commit: current={ac.current.name} path_index={ac.path_index} expected={expected.name}'
+                )
+            # if is_blocked(ac, approved):
+            #     reason = block_reason(ac, approved)
+            #     print(f'{ac.id} condition: {reason}, wait_ticks: {ac.wait_ticks}')
+            # if ac.id == 'A2' and not ac.removed:
+            #     print('A2 next:', ac.propose_next().name if ac.propose_next() else None)
+            #     print('A2 reason:', block_reason(ac, approved))
 
         # for ac in aircraft_list:
         #     if ac.removed:
@@ -142,7 +180,8 @@ def main_sim(SCENARIO):
 
 
 if __name__ == "__main__":
-    for scenario_name in scenario_names:
-        print(f"Running scenario: {scenario_name}")
-        main_sim(SCENARIOS[scenario_name])
-        print("\n")
+    main_sim(SCENARIOS['simple_departures'])
+    # for scenario_name in scenario_names:
+    #     print(f"Running scenario: {scenario_name}")
+    #     main_sim(SCENARIOS[scenario_name])
+    #     print("\n")

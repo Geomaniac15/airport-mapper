@@ -49,8 +49,10 @@ def collect_proposals(aircraft_list):
     for ac in aircraft_list:
         if ac.removed:
             continue
+
         next_node = ac.propose_next()
         corridor = ac.propose_corridor()
+        
         if next_node:
             proposals[ac.id] = (ac, next_node, corridor)
     

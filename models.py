@@ -43,10 +43,11 @@ class Aircraft:
         if self.done:
             return None
         
-        if self.path_index + 1 >= len(self.path):
+        i = self.path_index + 1
+        if i >= len(self.path):
             return None  # no move, already at goal
         
-        return self.path[self.path_index + 1]
+        return self.path[i]
     
     def propose_corridor(self, k=None):
         # return a list of nodes representing the corridor the aircraft wants to reserve
@@ -59,7 +60,7 @@ class Aircraft:
         
         # next nodes along the path (skips current node)
         start = self.path_index + 1
-        end = start + k
+        end = min(len(self.path), start + k)
 
         corridor = self.path[start:end]
         return corridor if corridor else None
