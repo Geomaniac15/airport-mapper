@@ -35,7 +35,7 @@ def run_scenario(
 
         ac.path_index = 0
         ac.current = ac.path[0]
-        ac.goal = ac.path[-1].name
+        ac.goal = ac.path[-1]
         ac.current.occupied_by = ac.id
 
         aircraft_list.append(ac)
@@ -54,6 +54,10 @@ def run_scenario(
 
         moved = commit_moves(proposals, approved)
 
+        for ac in aircraft_list:
+            if not ac.done and ac.current is ac.goal:
+                ac.done = True
+
         if moved:
             no_progress = 0
         else:
@@ -61,14 +65,14 @@ def run_scenario(
             if no_progress >= 3:
                 deadlock = True
                 break
-        
-        if not approved:
-            deadlock = True
-            break
 
         if all(ac.removed for ac in aircraft_list):
             break
-    
+
+    print(f'Scenario completed in {t} steps. Deadlock: {deadlock}')
+    for ac in aircraft_list:
+        print(f'{ac.id}: removed={ac.removed}, done={ac.done}, current={loc(ac)}')
+
     return {
         'aircraft': aircraft_list,
         'deadlock': deadlock,
