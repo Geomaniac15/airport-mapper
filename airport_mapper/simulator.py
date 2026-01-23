@@ -110,8 +110,8 @@ def run_scenario(
             break
 
     print(f'Scenario completed in {t} steps. Deadlock: {deadlock}')
-    for ac in aircraft_list:
-        print(f'{ac.id}: removed={ac.removed}, done={ac.done}, current={loc(ac)}')
+    # for ac in aircraft_list:
+    #     print(f'{ac.id}: removed={ac.removed}, done={ac.done}, current={loc(ac)}')
 
     return {
         'aircraft': aircraft_list,
@@ -293,15 +293,24 @@ def main_sim(SCENARIO):
 
 
 if __name__ == "__main__":
-    result = run_scenario(SCENARIOS['simple_departures'])
-    print_events(result['history'], limit=30)
     print('\n')
-    print_timeline(result['history'], 'A1')
-    print('\n')
-    plot_wait_ticks(result['history'])
+    # result = run_scenario(SCENARIOS['simple_departures'])
+    # print_events(result['history'], limit=30)
+    # print('\n')
+    # print_timeline(result['history'], 'A1')
+    # print('\n')
+    # plot_wait_ticks(result['history'])
 
 
-    # for scenario_name in scenario_names:
-    #     print(f"Running scenario: {scenario_name}")
-    #     main_sim(SCENARIOS[scenario_name])
-    #     print("\n")
+    for scenario_name in scenario_names:
+        print(f"Running scenario: {scenario_name}")
+        result = run_scenario(SCENARIOS[scenario_name])
+        if 'A1' in [ac.id for ac in result['aircraft']]:
+            print_timeline(result['history'], 'A1')
+            print("\n")
+        if 'A2' in [ac.id for ac in result['aircraft']]:
+            print_timeline(result['history'], 'A2')
+            print("\n")
+        if 'A3' in [ac.id for ac in result['aircraft']]:
+            print_timeline(result['history'], 'A3')
+            print("\n")
