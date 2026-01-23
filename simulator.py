@@ -48,7 +48,7 @@ def main_sim(SCENARIO):
         
         aircraft_list.append(ac)
 
-    print(spec['aircraft_id'], 'path:', ' -> '.join(path))
+    # print(spec['aircraft_id'], 'path:', ' -> '.join(path))
     assert path[-1] == goal, f'{spec["aircraft_id"]} path ends at {path[-1]}  not {goal}'
 
     occupied = set()
@@ -97,7 +97,7 @@ def main_sim(SCENARIO):
         # 2. proposal phase   
         proposals = collect_proposals(aircraft_list)
 
-        print('RWY occupied by:', nodes['RWY'].occupied_by)
+        # print('RWY occupied by:', nodes['RWY'].occupied_by)
 
         # 3. conflict resolution phase
         approved = resolve_conflicts(proposals)
@@ -169,8 +169,8 @@ def main_sim(SCENARIO):
 
 
 if __name__ == "__main__":
-    main_sim(SCENARIOS['simple_departures'])
-    # for scenario_name in scenario_names:
-    #     print(f"Running scenario: {scenario_name}")
-    #     main_sim(SCENARIOS[scenario_name])
-    #     print("\n")
+    # main_sim(SCENARIOS['simple_departures'])
+    for scenario_name in scenario_names:
+        print(f"Running scenario: {scenario_name}")
+        main_sim(SCENARIOS[scenario_name])
+        print("\n")
