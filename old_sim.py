@@ -1,3 +1,10 @@
+from airport_mapper.graph import graph
+from airport_mapper.main_sim import build_nodes, bfs_path, resolve_conflicts, commit_moves, loc
+from airport_mapper.models import Aircraft, Node
+from airport_mapper.planning import collect_proposals
+from airport_mapper.rules import is_blocked, block_reason
+from airport_mapper.scenarios import SCENARIOS
+
 def main_sim(SCENARIO):
     nodes = build_nodes()
     aircraft_list = []
@@ -144,3 +151,7 @@ def main_sim(SCENARIO):
     # print(bfs_path(graph, 'S1', 'R2')) # Works
     # print(bfs_path(graph, 'S2', 'R2'))
 
+for SCENARIO_NAME, SCENARIO in SCENARIOS.items():
+    print(f"Running scenario: {SCENARIO_NAME}")
+    main_sim(SCENARIO)
+    print("-" * 40)
