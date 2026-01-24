@@ -26,7 +26,7 @@ def build_graph_from_polylines(polylines, decimals=5):
         # print('\n')
         return point_to_node[key]
     
-    graph = defaultdict(list)
+    graph = defaultdict(set)  # has to be a set to avoid duplicate edges
 
     for line in polylines:
         if len(line) < 2:
@@ -35,9 +35,12 @@ def build_graph_from_polylines(polylines, decimals=5):
             na = get_node_id(a, decimals=4)
             nb = get_node_id(b, decimals=4)
 
-            graph[na].append(nb)
-            graph[nb].append(na)
-        
+            if na == nb:
+                continue
+
+            graph[na].add(nb)
+            graph[nb].add(na)
+
     
     graph = {k: sorted(v) for k, v in graph.items()}
     return graph, node_pos
