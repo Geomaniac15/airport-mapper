@@ -46,7 +46,7 @@ polylines = build_graph(
 print('Number of polylines:', len(polylines))
 print('Polyline lengths:', [len(p) for p in polylines])
 
-graph, node_pos = build_graph_from_polylines(polylines, decimals=0)
+graph, node_pos = build_graph_from_polylines(polylines, decimals=5)
 
 print('Number of nodes:', len(graph))
 print('Total edges:', sum(len(v) for v in graph.values()) // 2)

@@ -13,10 +13,11 @@ def build_graph_from_polylines(polylines, decimals=5):
     node_pos = {}
     next_id = 0
 
-    def get_node_id(point, decimals=0):
+    def get_node_id(point, decimals):
         nonlocal next_id
         key = (round(point[0], decimals), round(point[1], decimals))
-        if point not in point_to_node:
+        # HAS TO BE KEY NOT IN, not point
+        if key not in point_to_node:
             node_id = f'N{next_id}'
             point_to_node[key] = node_id
             node_pos[node_id] = key
@@ -31,8 +32,8 @@ def build_graph_from_polylines(polylines, decimals=5):
         if len(line) < 2:
             continue
         for a, b in zip(line, line[1:]):
-            na = get_node_id(a)
-            nb = get_node_id(b)
+            na = get_node_id(a, decimals=4)
+            nb = get_node_id(b, decimals=4)
 
             graph[na].append(nb)
             graph[nb].append(na)
