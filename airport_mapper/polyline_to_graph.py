@@ -3,6 +3,8 @@ import os
 
 from airport_mapper.coord_graph import build_graph_from_polylines
 
+FILE = 'jfk_graph.json'
+
 def build_graph(overpass_json, decimals=4, aeroway_types=None):
     '''
     extract polylines from overpass JSON data
@@ -43,7 +45,10 @@ polylines = build_graph(
 
 graph, node_pos = build_graph_from_polylines(polylines)
 
-print('graph:', graph)
+with open(FILE, 'w', encoding='utf-8') as f:
+    json.dump(graph, f, indent=2)
+
+#print('graph:', graph)
 # print('node positions:', node_pos)
 
 # n = next(iter(graph))
