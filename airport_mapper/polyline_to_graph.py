@@ -44,13 +44,20 @@ polylines = build_graph(
 )
 
 print('Number of polylines:', len(polylines))
-print('Polyline lengths:', [len(p) for p in polylines])
+# print('Polyline lengths:', [len(p) for p in polylines])
 
 graph, node_pos = build_graph_from_polylines(polylines, decimals=5)
 
 print('Number of nodes:', len(graph))
 print('Total edges:', sum(len(v) for v in graph.values()) // 2)
 print('Degrees:', sorted(set(len(v) for v in graph.values())))
+print('\n')
+
+print('Top 10 nodes by degree:')
+top10 = sorted(graph.items(), key=lambda kv: len(kv[1]), reverse=True)[:10]
+
+for node, neighbors in top10:
+    print(f'Node {node} (degree {len(neighbors)}): neighbors {neighbors}')
 
 with open(FILE, 'w', encoding='utf-8') as f:
     json.dump(graph, f, indent=2)
