@@ -13,16 +13,17 @@ def build_graph_from_polylines(polylines):
     node_pos = {}
     next_id = 0
 
-    def get_node_id(point):
+    def get_node_id(point, decimals=5):
         nonlocal next_id
+        key = (round(point[0], decimals), round(point[1], decimals))
         if point not in point_to_node:
             node_id = f'N{next_id}'
-            point_to_node[point] = node_id
-            node_pos[node_id] = point
+            point_to_node[key] = node_id
+            node_pos[node_id] = key
             next_id += 1
-        print(point_to_node)
-        print('\n')
-        return point_to_node[point]
+        # print(point_to_node)
+        # print('\n')
+        return point_to_node[key]
     
     graph = defaultdict(list)
 

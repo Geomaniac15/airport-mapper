@@ -52,12 +52,24 @@ def get_airport_aeroway_features_by_iata(iata: str) -> dict:
     return overpass(query)
 
 data = get_airport_aeroway_features_by_iata("LAX")
-print("elements:", len(data.get("elements", [])))
+#print("elements:", len(data.get("elements", [])))
 # print(data)
 
-with open(FILE, 'w', encoding='utf-8') as f:
-    json.dump(data, f, indent=2)
+# with open(FILE, 'w', encoding='utf-8') as f:
+#     json.dump(data, f, indent=2)
 
-for el in data.get("elements", []):
-    if el.get("tags", {}).get("aeroway") == "taxiway":
-        print(el)
+ways = [e for e in data['elements'] if e.get('type') == 'way' and 'geometry' in e]
+
+polylines = []
+for way in ways:
+    coords = [(pt['lon'], pt['lat']) for pt in way['geometry']]
+    tags = way.get('tags', {})
+    polylines.append({
+        'id': way['id'],
+        'aeroway': tags.get('aeroway'),
+        'ref': tags.get('ref'),
+        'coords': coords,
+    })
+
+print(f'ways with geometry: {len(polylines)}')
+print(f'sample way:', polylines[0] if polylines else None)
