@@ -43,7 +43,14 @@ polylines = build_graph(
     aeroway_types={'taxiway', 'taxilane', 'runway', 'apron'},
 )
 
-graph, node_pos = build_graph_from_polylines(polylines)
+print('Number of polylines:', len(polylines))
+print('Polyline lengths:', [len(p) for p in polylines])
+
+graph, node_pos = build_graph_from_polylines(polylines, decimals=0)
+
+print('Number of nodes:', len(graph))
+print('Total edges:', sum(len(v) for v in graph.values()) // 2)
+print('Degrees:', sorted(set(len(v) for v in graph.values())))
 
 with open(FILE, 'w', encoding='utf-8') as f:
     json.dump(graph, f, indent=2)

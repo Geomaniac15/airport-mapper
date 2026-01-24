@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-def build_graph_from_polylines(polylines):
+def build_graph_from_polylines(polylines, decimals=5):
     '''
     polylines: list[list[tuple[float, float]]]
         A list of polylines, where each polyline is a list of (x, y) coordinates.
@@ -13,7 +13,7 @@ def build_graph_from_polylines(polylines):
     node_pos = {}
     next_id = 0
 
-    def get_node_id(point, decimals=5):
+    def get_node_id(point, decimals=0):
         nonlocal next_id
         key = (round(point[0], decimals), round(point[1], decimals))
         if point not in point_to_node:

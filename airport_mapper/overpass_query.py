@@ -51,12 +51,12 @@ def get_airport_aeroway_features_by_iata(iata: str) -> dict:
     """
     return overpass(query)
 
-data = get_airport_aeroway_features_by_iata("LAX")
+data = get_airport_aeroway_features_by_iata("JFK")
 #print("elements:", len(data.get("elements", [])))
 # print(data)
 
-# with open(FILE, 'w', encoding='utf-8') as f:
-#     json.dump(data, f, indent=2)
+with open(FILE, 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2)
 
 ways = [e for e in data['elements'] if e.get('type') == 'way' and 'geometry' in e]
 
