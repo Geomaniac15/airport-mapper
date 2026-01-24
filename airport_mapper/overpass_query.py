@@ -1,58 +1,63 @@
 import requests
 import json
 
+FILE = 'airport_mapper/overpass_data.json'
+
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 def overpass(query: str) -> dict:
-    r = requests.post(OVERPASS_URL, data={'data': query}, timeout=600)
+    r = requests.post(OVERPASS_URL, data={"data": query}, timeout=600)
     if not r.ok:
-        print('Overpass query failed:', r.text[:2000])
+        print("Overpass query failed:", r.text[:2000])
     r.raise_for_status()
     return r.json()
 
-def get_area_id_for_iata(iata: str) -> int:
+def get_airport_aeroway_features_by_iata(iata: str) -> dict:
     query = f"""
-    [out:json][timeout:25];
+    [out:json][timeout:300];
+
+    // Prefer relation/way airport boundary if it exists
     (
       rel["aeroway"="aerodrome"]["iata"="{iata}"];
       way["aeroway"="aerodrome"]["iata"="{iata}"];
+    )->.airport;
+
+    // If we found a boundary-ish object, turn it into an area and query inside it
+    (
+      .airport;
       node["aeroway"="aerodrome"]["iata"="{iata}"];
-    );
-    out ids;
+    )->.any;
+
+    // Try area route first
+    .airport map_to_area -> .a;
+
+    (
+      way["aeroway"](area.a);
+      node["aeroway"](area.a);
+      rel["aeroway"](area.a);
+    )->.inside;
+
+    // If area query returns nothing, fall back to around() using aerodrome node location
+    // (Overpass can't do if/else, so we just also do this and you'll merge results client-side.)
+    node["aeroway"="aerodrome"]["iata"="{iata}"]->.p;
+    (
+      way["aeroway"](around.p:10000);
+      node["aeroway"](around.p:10000);
+      rel["aeroway"](around.p:10000);
+    )->.near;
+
+    (.inside; .near;);
+    out body geom;
     """
-    print('Executing query:', query)  # Log the query being sent
-    data = overpass(query)
-    elements = data.get('elements', [])
-    if not elements:
-        print('No aerodrome elements found for IATA code:', iata)  # Log the IATA code
-        raise ValueError(f'No aerodrome elements found for IATA code {iata}')
-    elem = elements[0]
-    elem_id = elem['id']
-    elem_type = elem['type']
-    print(f'Element type: {elem_type}, ID: {elem_id}')
-    if elem_type == 'relation':
-        area_id = 3600000000 + elem_id
-    elif elem_type == 'way':
-        area_id = 2400000000 + elem_id
-    elif elem_type == 'node':
-        area_id = 3600000000 + elem_id
-    else:
-        raise ValueError(f'Unexpected element type: {elem_type}')
-    return area_id
+    return overpass(query)
 
-area_id = get_area_id_for_iata('LAX')
-print(f'Area ID: {area_id}')
+data = get_airport_aeroway_features_by_iata("LAX")
+print("elements:", len(data.get("elements", [])))
+# print(data)
 
-query = f"""
-[out:json][timeout:300];
+with open(FILE, 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2)
 
-way["aeroway"](area:{area_id});
-
-out tags;
-"""
-
-try:
-    data = overpass(query)
-    print(len(data['elements']))
-except Exception as e:
-    print(f'Error in big query: {e}')
+for el in data.get("elements", []):
+    if el.get("tags", {}).get("aeroway") == "taxiway":
+        print(el)
