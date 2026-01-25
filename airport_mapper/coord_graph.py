@@ -9,7 +9,7 @@ def build_graph_from_polylines(polylines, decimals=5):
         node_pos: dict[str, tuple[float, float]] node -> (x, y) position mapping
     '''
 
-    point_to_node = {}
+    key_to_node = {}
     node_pos = {}
     next_id = 0
 
@@ -17,33 +17,41 @@ def build_graph_from_polylines(polylines, decimals=5):
         nonlocal next_id
         key = (round(point[0], decimals), round(point[1], decimals))
         # HAS TO BE KEY NOT IN, not point
-        if key not in point_to_node:
+        if key not in key_to_node:
             node_id = f'N{next_id}'
-            point_to_node[key] = node_id
+            key_to_node[key] = node_id
             node_pos[node_id] = key
             next_id += 1
-        # print(point_to_node)
+        # print(key_to_node)
         # print('\n')
-        return point_to_node[key]
+        return key_to_node[key]
     
-    graph = defaultdict(set)  # has to be a set to avoid duplicate edges
+    graph = defaultdict(lambda: defaultdict(set))  # has to be a set to avoid duplicate edges
+    
+    def add_edge(a, b, aeroway_type):
+        if a == b:
+            return
+        graph[a][b].add(aeroway_type)
+        graph[b][a].add(aeroway_type)
 
-    for line in polylines:
-        if len(line) < 2:
+    for item in polylines:
+        coords = item.get('coords', [])
+        aeroway_type = item.get('aeroway')
+        if not aeroway_type or len(coords) < 2:
             continue
-        for a, b in zip(line, line[1:]):
-            na = get_node_id(a, decimals=4)
-            nb = get_node_id(b, decimals=4)
 
-            if na == nb:
-                continue
 
-            graph[na].add(nb)
-            graph[nb].add(na)
+        for p, q in zip(coords, coords[1:]):
+            na = get_node_id(p, decimals=4)
+            nb = get_node_id(q, decimals=4)
+            add_edge(na, nb, aeroway_type)
 
-    
-    graph = {k: sorted(v) for k, v in graph.items()}
-    return graph, node_pos
+
+    frozen ={
+        n: {nbr: set(types) for nbr, types in nbrs.items()}
+        for n, nbrs in graph.items()
+    }
+    return frozen, node_pos, key_to_node
 
 
 if __name__ == '__main__':
