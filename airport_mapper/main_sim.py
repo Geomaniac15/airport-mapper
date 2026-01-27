@@ -2,6 +2,8 @@
 #  defaultdict for grouping aircraft by requested node
 from collections import deque, defaultdict
 import time
+import json
+import os
 import matplotlib.pyplot as plt
 
 from airport_mapper.models import Node, Aircraft
@@ -9,6 +11,13 @@ from airport_mapper.graph import graph, exclusive_nodes, draw_graph
 from airport_mapper.planning import bfs_path, corridor_is_clear, collect_proposals
 from airport_mapper.rules import is_blocked, block_reason, resolve_conflicts, commit_moves
 from airport_mapper.scenarios import SCENARIOS, scenario_names
+from airport_mapper.polyline_to_graph import haversine_m
+
+# Load node positions from graph file
+HERE = os.path.dirname(__file__)
+with open(os.path.join(HERE, 'jfk_graph_labeled.json'), 'r') as f:
+    graph_data = json.load(f)
+    node_pos = graph_data.get('node_positions', {})
 
 
 def loc(ac):
@@ -136,10 +145,13 @@ def compute_metrics(result):
             None
         )
 
+        distance_m = round(get_distance_travelled(positions, node_pos), 1)
+
         metrics['aircraft'][a_id] = {
             'time_to_airborne': time_to_airborne,
             'total_blocked_ticks': sum(1 for w in waits if w > 0),
             'max_wait_ticks': max(waits) if waits else 0,
+            'distance_travelled_m': f'{distance_m} m',
         }
 
     return metrics
@@ -173,6 +185,15 @@ def print_aircraft_timelines(aircraft):
         print_timeline(result['history'], ac)
         print('\n')
 
+def get_distance_travelled(path, node_pos):
+    total_m = 0.0
+    for a, b in zip(path, path[1:]):
+        if a == 'AIRBORNE' or b == 'AIRBORNE':
+            break
+        total_m += haversine_m(node_pos[a], node_pos[b])
+    
+    return total_m
+
 if __name__ == "__main__":
     print('\n')
     result = run_scenario(SCENARIOS['three_departures'])
@@ -180,8 +201,11 @@ if __name__ == "__main__":
     # print('\n')
     # print_timeline(result['history'], 'A1')
     aircraft_list = [ac.id for ac in result['aircraft']]
-    print_aircraft_timelines(aircraft_list)
+    # print_aircraft_timelines(aircraft_list)
+    print_timeline(result['history'], 'A1')
     print('\n')
+    metrics = compute_metrics(result)
+    print(metrics)
     # plot_wait_ticks(result['history'])
 
 

@@ -258,7 +258,7 @@ print('stand points (OSM):', len(stand_points))
 print('snapped to graph:', len(snapped))
 print('unique S nodes:', len(set(snapped.values())))
 
-draw_graph(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
+# draw_graph(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
 
 # print('\n')
 # print(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
