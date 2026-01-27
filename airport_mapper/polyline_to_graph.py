@@ -233,8 +233,8 @@ with open(FILE, 'w', encoding='utf-8') as f:
 
 print('wrote to:', FILE)
 
-draw_graph(out['adjacency'])
+draw_graph(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
 
 # print('\n')
-# print(out['adjacency'])
+# print(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
 # print('\n')

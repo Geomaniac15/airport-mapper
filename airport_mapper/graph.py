@@ -26,19 +26,33 @@ graph = {
 
 exclusive_nodes = {'I1','I2', 'I3', 'I4', 'I5', 'I6', 'I7', 'R1', 'R2', 'RWY'}
 
-def draw_graph(graph):
-    G = nx.Graph()
+def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
+    # faint edges
+    for a, nbrs in adjacency.items():
+        ax, ay = pos[a]
+        for b in nbrs:
+            bx, by = pos[b]
+            plt.plot([ax, bx], [ay, by], linewidth=0.2, alpha=0.06)
 
-    for node, neighbours in graph.items():
-        for neighbour in neighbours:
-            G.add_edge(node, neighbour)
+    # all nodes tiny
+    xs = [pos[n][0] for n in adjacency]
+    ys = [pos[n][1] for n in adjacency]
+    plt.scatter(xs, ys, s=1, alpha=0.25)
 
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G, seed=42)
-    nx.draw(
-        G, 
-        pos, 
-        with_labels=True, 
-        node_size=2000, 
-        font_size=10)
+    if node_types:
+        S = [n for n, t in node_types.items() if t == "S" and n in pos]
+        R = [n for n, t in node_types.items() if t == "R" and n in pos]
+
+        if S:
+            plt.scatter([pos[n][0] for n in S], [pos[n][1] for n in S], s=12, marker="s")
+        if R:
+            plt.scatter([pos[n][0] for n in R], [pos[n][1] for n in R], s=18, marker="^")
+
+        if label_nodes:
+            # label only a few, otherwise you get your black-hole again
+            for n in (R[:30] + S[:30]):
+                x, y = pos[n]
+                plt.text(x, y, n, fontsize=6)
+
+    plt.gca().set_aspect("equal", adjustable="box")
     plt.show()
