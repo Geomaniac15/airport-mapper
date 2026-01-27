@@ -42,8 +42,8 @@ def build_graph_from_polylines(polylines, decimals=5):
 
 
         for p, q in zip(coords, coords[1:]):
-            na = get_node_id(p, decimals=4)
-            nb = get_node_id(q, decimals=4)
+            na = get_node_id(p, decimals)
+            nb = get_node_id(q, decimals)
             add_edge(na, nb, aeroway_type)
 
 

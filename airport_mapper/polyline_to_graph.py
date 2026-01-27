@@ -1,7 +1,9 @@
 import json
 import os
+import math
 
 from airport_mapper.coord_graph import build_graph_from_polylines
+from airport_mapper.graph import draw_graph
 
 FILE = 'airport_mapper/jfk_graph_labeled.json'
 
@@ -25,10 +27,36 @@ def extract_stand_keys(overpass_json, decimals=5):
         if tags.get('aeroway') in {'gate', 'parking_position', 'stand'}:
             lon = e.get('lon')
             lat = e.get('lat')
-            if lon is None or lat is None:
+            if lon is not None and lat is not None:
                 stand_keys.add(round_func(lon, lat, decimals))
     
     return stand_keys
+
+def haversine_m(a, b):
+    R = 6371000.0
+    lon1, lat1 = map(math.randians, a)
+    lon2, lat2 = map(math.randians, b)
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    x = math.sin(dlat/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2)**2
+    return 2 * R * math.asin(math.sqrt(x))
+
+def snap_points_to_graph(points, node_pos, max_dist_m=40):
+    nodes = list(node_pos.items())
+    snapped = {}
+    for p in points:
+        best_node = None
+        best_d = float('inf')
+        for node_id, coord in nodes:
+            d = haversine_m(p, coord)
+            if d < best_d:
+                best_d = d
+                best_node = node_id
+        
+        if best_node is not None and best_d <= max_dist_m:
+            snapped[p] = best_node
+    
+    return snapped
 
 def label_nodes(graph, node_pos, stand_keys):
     node_type = {}
@@ -175,7 +203,7 @@ graph_typed, node_pos, key_to_node = build_graph_from_polylines(
 node_type = label_nodes(
     graph_typed,
     node_pos,
-    stand_keys,
+    stand_keys=stand_keys,
 )
 
 out = {
@@ -187,6 +215,7 @@ out = {
         for n, nbrs in graph_typed.items()
     },
 }
+
 
 print('polylines:', len(tagged_polylines))
 print('nodes:', len(out['adjacency']))
@@ -203,3 +232,9 @@ with open(FILE, 'w', encoding='utf-8') as f:
     json.dump(out, f, indent=2)
 
 print('wrote to:', FILE)
+
+draw_graph(out['adjacency'])
+
+# print('\n')
+# print(out['adjacency'])
+# print('\n')
