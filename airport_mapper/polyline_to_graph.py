@@ -7,16 +7,16 @@ from airport_mapper.graph import draw_graph
 
 FILE = 'airport_mapper/jfk_graph_labeled.json'
 
-EDGE_AEROWAYS = {'taxiway', 'taxilane', 'runway'}
+EDGE_AEROWAYS = {'taxiway', 'taxilane', 'runway', 'apron'}
 STAND_AEROWAYS = {'gate', 'parking_position', 'stand'}
 
 def round_func(lon, lat, decimals):
     return (round(lon, decimals), round(lat, decimals))
 
-def extract_stand_keys(overpass_json, decimals=5):
-    # extract stand node keys from overpass JSON data
+def extract_stand_points(overpass_json, decimals=5):
+    # extract stand node points from overpass JSON data
 
-    stand_keys = set()
+    pts = []
 
     for e in overpass_json.get('elements',[]):
         if e.get('type') != 'node':
@@ -28,21 +28,25 @@ def extract_stand_keys(overpass_json, decimals=5):
             lon = e.get('lon')
             lat = e.get('lat')
             if lon is not None and lat is not None:
-                stand_keys.add(round_func(lon, lat, decimals))
+                pts.append((lon, lat))
     
-    return stand_keys
+    return pts
 
 def haversine_m(a, b):
     R = 6371000.0
-    lon1, lat1 = map(math.randians, a)
-    lon2, lat2 = map(math.randians, b)
+    lon1, lat1 = map(math.radians, a)
+    lon2, lat2 = map(math.radians, b)
     dlon = lon2 - lon1
     dlat = lat2 - lat1
     x = math.sin(dlat/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2)**2
     return 2 * R * math.asin(math.sqrt(x))
 
-def snap_points_to_graph(points, node_pos, max_dist_m=40):
-    nodes = list(node_pos.items())
+def snap_points_to_graph(points, node_pos, candidates=None, max_dist_m=40):
+    if candidates is None:
+        nodes = list(node_pos.items())
+    else:
+        nodes = [(n, node_pos[n]) for n in candidates]
+    
     snapped = {}
     for p in points:
         best_node = None
@@ -190,10 +194,7 @@ tagged_polylines = extract_polylines(
     aeroway_types=EDGE_AEROWAYS,
 )
 
-stand_keys = extract_stand_keys(
-    data,
-    decimals=5,
-)
+stand_points = extract_stand_points(data)
 
 graph_typed, node_pos, key_to_node = build_graph_from_polylines(
     tagged_polylines,
@@ -203,8 +204,29 @@ graph_typed, node_pos, key_to_node = build_graph_from_polylines(
 node_type = label_nodes(
     graph_typed,
     node_pos,
-    stand_keys=stand_keys,
+    stand_keys=set(),
 )
+
+# candidate notes: nodes with one taxilane incident edge
+candidates = []
+for n, nbrs in graph_typed.items():
+    incident = set()
+    for types in nbrs.values():
+        incident |= set(types)
+
+    if incident & EDGE_AEROWAYS:
+        candidates.append(n)
+
+print('candiate nodes (taxilane-adjacent):', len(candidates))
+
+snapped = snap_points_to_graph(
+    stand_points,
+    node_pos,
+    candidates=candidates,
+    max_dist_m=50
+)
+for node in snapped.values():
+    node_type[node] = 'S'
 
 out = {
     'adjacency': graph_to_adjacency(graph_typed),
@@ -215,7 +237,6 @@ out = {
         for n, nbrs in graph_typed.items()
     },
 }
-
 
 print('polylines:', len(tagged_polylines))
 print('nodes:', len(out['adjacency']))
@@ -232,6 +253,10 @@ with open(FILE, 'w', encoding='utf-8') as f:
     json.dump(out, f, indent=2)
 
 print('wrote to:', FILE)
+
+print('stand points (OSM):', len(stand_points))
+print('snapped to graph:', len(snapped))
+print('unique S nodes:', len(set(snapped.values())))
 
 draw_graph(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
 
