@@ -1,30 +1,22 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import json
+import os
 
-graph = {
-    # Stands
-    'S1': ['I1'],
-    'S2': ['I2'],
-    'S3': ['I6'],
+# Load JFK graph from JSON
+HERE = os.path.dirname(__file__)
+with open(os.path.join(HERE, 'jfk_graph_labeled.json'), 'r', encoding='utf-8') as f:
+    _jfk_data = json.load(f)
 
-    # Intersections
-    'I1': ['S1', 'I3', 'I4'],
-    'I2': ['S2', 'I3', 'I5'],
-    'I3': ['I1', 'I2', 'I4', 'I5'],
-    'I4': ['I1', 'I3', 'I6', 'I7'],
-    'I5': ['I2', 'I3', 'R2'],
-    'I6': ['S3', 'I7'],
-    'I7': ['I4', 'I6', 'R1'],
+graph = _jfk_data['adjacency']
+node_types = _jfk_data['node_types']
 
-    # Runway Access Points
-    'R1': ['I7', 'RWY'],
-    'R2': ['I5', 'RWY'],
+# Exclusive nodes are runways (R) and intersections (I) - only one aircraft at a time
+exclusive_nodes = {node for node, ntype in node_types.items() if ntype in {'R', 'I'}}
 
-    # Runway
-    'RWY': ['R1', 'R2'],
-}
-
-exclusive_nodes = {'I1','I2', 'I3', 'I4', 'I5', 'I6', 'I7', 'R1', 'R2', 'RWY'}
+# Non-exclusive nodes are stands (S) - multiple aircraft can wait at stands
+stand_nodes = {node for node, ntype in node_types.items() if ntype == 'S'}
+runway_nodes = {node for node, ntype in node_types.items() if ntype == 'R'}
 
 def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
     # faint edges
@@ -49,7 +41,7 @@ def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
             plt.scatter([pos[n][0] for n in R], [pos[n][1] for n in R], s=18, marker="^")
 
         if label_nodes:
-            # label only a few, otherwise you get your black-hole again
+            # label only a few
             for n in (R[:30] + S[:30]):
                 x, y = pos[n]
                 plt.text(x, y, n, fontsize=6)

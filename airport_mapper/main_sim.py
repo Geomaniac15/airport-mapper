@@ -182,7 +182,7 @@ if __name__ == "__main__":
         print(f"Running scenario: {scenario_name}")
         result = run_scenario(SCENARIOS[scenario_name])
         metrics = compute_metrics(result)
-        print(metrics)
+        # print(metrics)
         if 'A1' in [ac.id for ac in result['aircraft']]:
             print_timeline(result['history'], 'A1')
             print("\n")

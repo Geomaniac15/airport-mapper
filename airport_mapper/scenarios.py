@@ -1,16 +1,20 @@
+# JFK Graph scenarios using real node IDs from the largest connected component
+# Stands in main component: N789, N804, N805, N806, N808, etc.
+# Runways in main component: N1, N2, N3, N4, N5, etc.
+
 SCENARIOS = {
-    'simple_departures': [
-        { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'RWY' },
-        { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'RWY' },
+    'two_departures': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N1' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
     ],
-    'swap_positions': [
-        { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'S2' },
-        { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'S1' },
+    'three_departures': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N1' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
+        { 'aircraft_id': 'A3', 'start': 'N805', 'goal': 'N3' },
     ],
-    'runway_contention': [
-        { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'RWY' },
-        { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'RWY' },
-        { 'aircraft_id': 'A3', 'start': 'S3', 'goal': 'RWY' },
+    'stand_swap': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N789' },
     ],
 }
 
