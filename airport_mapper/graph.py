@@ -48,7 +48,7 @@ def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
 
     plt.gca().set_aspect("equal", adjustable="box")
 
-def plot_route(path, node_pos, color='red', lw=1):
+def plot_route(path, node_pos, color, label=None, lw=2.5):
     xs, ys = [], []
 
     for n in path:
@@ -60,4 +60,4 @@ def plot_route(path, node_pos, color='red', lw=1):
         xs.append(x)
         ys.append(y)
     
-    plt.plot(xs, ys, color=color, linewidth=lw, zorder=10)
+    plt.plot(xs, ys, color=color, linewidth=lw, label=label, zorder=10)

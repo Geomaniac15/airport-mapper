@@ -208,14 +208,21 @@ if __name__ == "__main__":
     print(metrics)
     # plot_wait_ticks(result['history'])
 
-    start = SCENARIOS['three_departures'][0]['start']
-    goal = SCENARIOS['three_departures'][0]['goal']
-
-    path = bfs_path(graph, start, goal)
-
     draw_graph(graph, node_pos, node_types=node_types)
 
-    plot_route(path, node_pos)
+    colours = {
+        'A1': 'red', 
+        'A2': 'orange', 
+        'A3': 'purple'
+        }
+    
+    for spec in SCENARIOS['three_departures']:
+        ac_id = spec['aircraft_id']
+        start = spec['start']
+        goal = spec['goal']
+        
+        path = bfs_path(graph, start, goal)
+        plot_route(path, node_pos, color=colours[ac_id], label=ac_id)
 
     plt.show()
 
