@@ -47,4 +47,17 @@ def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
                 plt.text(x, y, n, fontsize=6)
 
     plt.gca().set_aspect("equal", adjustable="box")
-    plt.show()
+
+def plot_route(path, node_pos, color='red', lw=1):
+    xs, ys = [], []
+
+    for n in path:
+        if n == 'AIRBORNE':
+            break
+        if n not in node_pos:
+            continue
+        x, y = node_pos[n]
+        xs.append(x)
+        ys.append(y)
+    
+    plt.plot(xs, ys, color=color, linewidth=lw, zorder=10)

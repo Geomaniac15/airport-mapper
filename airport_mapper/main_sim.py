@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 
 from airport_mapper.models import Node, Aircraft
-from airport_mapper.graph import graph, exclusive_nodes, draw_graph
+from airport_mapper.graph import graph, exclusive_nodes, draw_graph, plot_route, node_types
 from airport_mapper.planning import bfs_path, corridor_is_clear, collect_proposals
 from airport_mapper.rules import is_blocked, block_reason, resolve_conflicts, commit_moves
 from airport_mapper.scenarios import SCENARIOS, scenario_names
@@ -207,6 +207,17 @@ if __name__ == "__main__":
     metrics = compute_metrics(result)
     print(metrics)
     # plot_wait_ticks(result['history'])
+
+    start = SCENARIOS['three_departures'][0]['start']
+    goal = SCENARIOS['three_departures'][0]['goal']
+
+    path = bfs_path(graph, start, goal)
+
+    draw_graph(graph, node_pos, node_types=node_types)
+
+    plot_route(path, node_pos)
+
+    plt.show()
 
 
     # for scenario_name in scenario_names:
