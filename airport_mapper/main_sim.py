@@ -168,27 +168,34 @@ def plot_wait_ticks(history):
 
 # draw_graph(graph)
 
+def print_aircraft_timelines(aircraft):
+    for ac in aircraft:
+        print_timeline(result['history'], ac)
+        print('\n')
+
 if __name__ == "__main__":
     print('\n')
-    # result = run_scenario(SCENARIOS['simple_departures'])
+    result = run_scenario(SCENARIOS['three_departures'])
     # print_events(result['history'], limit=30)
     # print('\n')
     # print_timeline(result['history'], 'A1')
-    # print('\n')
+    aircraft_list = [ac.id for ac in result['aircraft']]
+    print_aircraft_timelines(aircraft_list)
+    print('\n')
     # plot_wait_ticks(result['history'])
 
 
-    for scenario_name in scenario_names:
-        print(f"Running scenario: {scenario_name}")
-        result = run_scenario(SCENARIOS[scenario_name])
-        metrics = compute_metrics(result)
-        # print(metrics)
-        if 'A1' in [ac.id for ac in result['aircraft']]:
-            print_timeline(result['history'], 'A1')
-            print("\n")
-        if 'A2' in [ac.id for ac in result['aircraft']]:
-            print_timeline(result['history'], 'A2')
-            print("\n")
-        if 'A3' in [ac.id for ac in result['aircraft']]:
-            print_timeline(result['history'], 'A3')
-            print("\n")
+    # for scenario_name in scenario_names:
+    #     print(f"Running scenario: {scenario_name}")
+    #     result = run_scenario(SCENARIOS[scenario_name])
+    #     metrics = compute_metrics(result)
+    #     # print(metrics)
+    #     if 'A1' in [ac.id for ac in result['aircraft']]:
+    #         print_timeline(result['history'], 'A1')
+    #         print("\n")
+    #     if 'A2' in [ac.id for ac in result['aircraft']]:
+    #         print_timeline(result['history'], 'A2')
+    #         print("\n")
+    #     if 'A3' in [ac.id for ac in result['aircraft']]:
+    #         print_timeline(result['history'], 'A3')
+    #         print("\n")
