@@ -14,7 +14,10 @@ graph = _jfk_data['adjacency']
 node_types = _jfk_data['node_types']
 
 # Exclusive nodes are runways (R) and intersections (I) - only one aircraft at a time
-exclusive_nodes = {node for node, ntype in node_types.items() if ntype in {'R', 'I'}}
+exclusive_nodes = {
+    node for node, ntype in node_types.items() 
+    if ntype in {'R', 'I', 'H'}
+    }
 
 # Non-exclusive nodes are stands (S) - multiple aircraft can wait at stands
 stand_nodes = {node for node, ntype in node_types.items() if ntype == 'S'}

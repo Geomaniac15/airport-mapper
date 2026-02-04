@@ -1,5 +1,21 @@
 from collections import defaultdict
+from airport_mapper.graph import graph, node_types
 from airport_mapper.planning import corridor_is_clear, collect_proposals
+
+holding_to_runway = set()
+
+for u, nbrs in graph.items():
+    if node_types.get(u) != 'H':
+        continue
+    for v in nbrs:
+        if node_types.get(v) == 'R':
+            holding_to_runway.add((u, v))
+
+def runway_is_occupied(aircraft):
+    return any(
+        (not ac.removed) and node_types.get(ac.current.name) == 'R'
+        for ac in aircraft
+    )
 
 def resolve_conflicts(proposals):
     # who is allowed to move
@@ -129,6 +145,16 @@ def commit_moves(proposals, approved):
     # return moved
 
 def is_blocked(ac, approved):
+    cur = ac.current.name
+    # use propose_next() API from Aircraft model
+    next_node = ac.propose_next()
+    nxt = next_node.name if next_node else None
+
+    # holding position clearance rule
+    if nxt is not None and (cur, nxt) in holding_to_runway:
+        if runway_is_occupied(ac.sim.aircraft_list):
+            return True
+
     if ac.removed or ac.done:
         return False
     if ac.propose_next() is None:

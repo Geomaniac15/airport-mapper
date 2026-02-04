@@ -32,6 +32,22 @@ def extract_stand_points(overpass_json, decimals=5):
     
     return pts
 
+def extract_holding_positions(overpass_json):
+    pts = []
+
+    for e in overpass_json.get('elements',[]):
+        if e.get('type') != 'node':
+            continue
+
+        tags = e.get('tags', {}) or {}
+        if tags.get('aeroway') == 'holding_position':
+            lon = e.get('lon')
+            lat = e.get('lat')
+            if lon is not None and lat is not None:
+                pts.append((lon, lat))
+    
+    return pts
+
 def haversine_m(a, b):
     R = 6371000.0
     lon1, lat1 = map(math.radians, a)
@@ -195,6 +211,7 @@ tagged_polylines = extract_polylines(
 )
 
 stand_points = extract_stand_points(data)
+holding_pts = extract_holding_positions(data)
 
 graph_typed, node_pos, key_to_node = build_graph_from_polylines(
     tagged_polylines,
@@ -225,8 +242,19 @@ snapped = snap_points_to_graph(
     candidates=candidates,
     max_dist_m=50
 )
+
+snapped_holding_pts = snap_points_to_graph(
+    holding_pts,
+    node_pos,
+    candidates=candidates,
+    max_dist_m=30
+)
+
 for node in snapped.values():
     node_type[node] = 'S'
+
+for node in snapped_holding_pts.values():
+    node_type[node] = 'H'
 
 out = {
     'adjacency': graph_to_adjacency(graph_typed),

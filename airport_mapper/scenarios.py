@@ -16,6 +16,20 @@ SCENARIOS = {
         { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
         { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N789' },
     ],
+    # backward-compatible scenario names expected by tests
+    'simple_departures': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N1' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
+    ],
+    'swap_positions': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N789' },
+    ],
+    'runway_contention': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N45' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N1' },
+        { 'aircraft_id': 'A3', 'start': 'N993', 'goal': 'N2' },
+    ],
 }
 
 scenario_names = list(SCENARIOS.keys())
