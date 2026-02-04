@@ -7,8 +7,8 @@ import os
 import matplotlib.pyplot as plt
 
 from airport_mapper.models import Node, Aircraft
-from airport_mapper.graph import graph, exclusive_nodes, draw_graph, plot_route, node_types
-from airport_mapper.planning import bfs_path, corridor_is_clear, collect_proposals
+from airport_mapper.graph import graph, exclusive_nodes, draw_graph, plot_route, node_types, build_weighted_graph
+from airport_mapper.planning import bfs_path, corridor_is_clear, collect_proposals, dijkstra_path
 from airport_mapper.rules import is_blocked, block_reason, resolve_conflicts, commit_moves
 from airport_mapper.scenarios import SCENARIOS, scenario_names
 from airport_mapper.polyline_to_graph import haversine_m
@@ -19,6 +19,7 @@ with open(os.path.join(HERE, 'jfk_graph_labeled.json'), 'r') as f:
     graph_data = json.load(f)
     node_pos = graph_data.get('node_positions', {})
 
+weighted_graph = build_weighted_graph(graph, node_pos)
 
 def loc(ac):
     return 'AIRBORNE' if ac.removed else ac.current.name
@@ -37,7 +38,8 @@ def run_scenario(
         start = spec['start']
         goal = spec['goal']
 
-        path = bfs_path(graph, start, goal)
+        # path = bfs_path(graph, start, goal)
+        path = dijkstra_path(weighted_graph, start, goal)
         if path is None:
             raise ValueError(f"No path for {spec['aircraft_id']} from {start} to {goal}")
 

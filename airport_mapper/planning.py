@@ -1,5 +1,6 @@
 from collections import deque, defaultdict
 import time
+import heapq
 
 def corridor_is_clear(corridor):
     if corridor is None:
@@ -42,6 +43,38 @@ def bfs_path(graph, start, goal):
     
     path.reverse()
     return path
+
+def dijkstra_path(graph_w, start, goal):
+    pq = [(0.0, start)]
+    dist = {start: 0.0}
+    prev = {start: None}
+
+    while pq:
+        d, u = heapq.heappop(pq)
+
+        if u == goal:
+            break
+
+        if d > dist[u]:
+            continue
+
+        for v, w in graph_w[u].items():
+            nd = d + w
+            if v not in dist or nd < dist[v]:
+                dist[v] = nd
+                prev[v] = u
+                heapq.heappush(pq, (nd, v))
+    
+    if goal not in prev:
+        return None
+    
+    path = []
+    cur = goal
+    while cur is not None:
+        path.append(cur)
+        cur = prev[cur]
+
+    return list(reversed(path))
 
 def collect_proposals(aircraft_list):
     # where does each aircraft want to go

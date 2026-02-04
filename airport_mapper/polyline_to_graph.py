@@ -3,7 +3,7 @@ import os
 import math
 
 from airport_mapper.coord_graph import build_graph_from_polylines
-from airport_mapper.graph import draw_graph
+# from airport_mapper.graph import draw_graph
 
 FILE = 'airport_mapper/jfk_graph_labeled.json'
 

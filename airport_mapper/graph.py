@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import json
 import os
+from airport_mapper.polyline_to_graph import haversine_m
 
 # Load JFK graph from JSON
 HERE = os.path.dirname(__file__)
@@ -61,3 +62,19 @@ def plot_route(path, node_pos, color, label=None, lw=2.5):
         ys.append(y)
     
     plt.plot(xs, ys, color=color, linewidth=lw, label=label, zorder=10)
+
+from airport_mapper.polyline_to_graph import haversine_m
+
+def build_weighted_graph(adjacency, node_pos):
+    weighted = {}
+
+    for a, nbrs in adjacency.items():
+        weighted[a] = {}
+        ax, ay = node_pos[a]
+
+        for b in nbrs:
+            bx, by = node_pos[b]
+            d = haversine_m((ax, ay), (bx, by))
+            weighted[a][b] = d
+    
+    return weighted
