@@ -78,3 +78,53 @@ def build_weighted_graph(adjacency, node_pos):
             weighted[a][b] = d
     
     return weighted
+
+def compress_graph(graph_w, node_types):
+
+    def is_compressible(n):
+        return node_types.get(n) == 'I' and len(graph_w[n]) == 2
+    
+    new_graph = {}
+    visited = set()
+
+    for n in graph_w:
+        if n in visited:
+            continue
+        
+        if is_compressible(n):
+            continue
+
+        new_graph.setdefault(n, {})
+
+        for nbr in graph_w[n]:
+            if (n, nbr) in visited or (nbr, n) in visited:
+                continue
+
+            path_len = graph_w[n][nbr]
+            prev = n
+            cur = nbr
+
+            # walk the chain, haha
+            while is_compressible(cur):
+                visited.add((prev, cur))
+                visited.add((cur, prev))
+
+                a, b = list(graph_w[cur].keys())
+
+                if a == prev:
+                    next_node = b
+                else:
+                    next_node = a
+
+                path_len += graph_w[cur][next_node]
+                prev, cur = cur, next_node
+            
+            # cur is now not compressible
+            new_graph.setdefault(cur, {})
+            new_graph[n][cur] = path_len
+            new_graph[cur][n] = path_len
+
+            visited.add((n, nbr))
+            visited.add((nbr, n))
+    
+    return new_graph
