@@ -22,8 +22,8 @@ SCENARIOS = {
         { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
     ],
     'swap_positions': [
-        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
-        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N789' },
+        { 'aircraft_id': 'A1', 'start': 'N14', 'goal': 'N15' },
+        { 'aircraft_id': 'A2', 'start': 'N15', 'goal': 'N14' },
     ],
     'runway_contention': [
         { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N45' },
