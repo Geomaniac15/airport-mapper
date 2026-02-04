@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import math
 import json
 import os
 from airport_mapper.polyline_to_graph import haversine_m
@@ -49,7 +50,7 @@ def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
 
     plt.gca().set_aspect("equal", adjustable="box")
 
-def plot_route(path, node_pos, color, label=None, lw=2.5):
+def plot_route(path, node_pos, color, label=None, lw=2.5, offset_index=0, total=1):
     xs, ys = [], []
 
     for n in path:
@@ -60,7 +61,33 @@ def plot_route(path, node_pos, color, label=None, lw=2.5):
         x, y = node_pos[n]
         xs.append(x)
         ys.append(y)
-    
+
+    if not xs:
+        return
+
+    # when multiple routes overlap, offset them perpendicular to their
+    # general direction so each path is visible.
+    if total and total > 1:
+        dx = xs[-1] - xs[0]
+        dy = ys[-1] - ys[0]
+        length = math.hypot(dx, dy) or 1.0
+        # unit perpendicular vector
+        px, py = -dy / length, dx / length
+
+        # scale offset relative to plot extent so it looks reasonable
+        all_x = [p[0] for p in node_pos.values()]
+        all_y = [p[1] for p in node_pos.values()]
+        xrange = max(all_x) - min(all_x) if all_x else 1.0
+        yrange = max(all_y) - min(all_y) if all_y else 1.0
+        scale = max(xrange, yrange)
+
+        mid = (total - 1) / 2.0
+        step = 0.002 * scale
+        offset = (offset_index - mid) * step
+
+        xs = [x + px * offset for x in xs]
+        ys = [y + py * offset for y in ys]
+
     plt.plot(xs, ys, color=color, linewidth=lw, label=label, zorder=10)
 
 from airport_mapper.polyline_to_graph import haversine_m

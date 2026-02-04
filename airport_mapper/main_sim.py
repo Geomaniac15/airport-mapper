@@ -219,13 +219,14 @@ if __name__ == "__main__":
         'A3': 'purple'
         }
     
-    for spec in SCENARIOS['three_departures']:
+    scenario = SCENARIOS['three_departures']
+    for i, spec in enumerate(scenario):
         ac_id = spec['aircraft_id']
         start = spec['start']
         goal = spec['goal']
         
-        path = bfs_path(graph, start, goal)
-        plot_route(path, node_pos, color=colours[ac_id], label=ac_id)
+        path = dijkstra_path(compressed_graph, start, goal)
+        plot_route(path, node_pos, color=colours[ac_id], label=ac_id, offset_index=i, total=len(scenario))
 
     plt.show()
 

@@ -8,9 +8,9 @@ SCENARIOS = {
         { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
     ],
     'three_departures': [
-        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N1' },
-        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
-        { 'aircraft_id': 'A3', 'start': 'N805', 'goal': 'N3' },
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N45' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N1' },
+        { 'aircraft_id': 'A3', 'start': 'N993', 'goal': 'N2' },
     ],
     'stand_swap': [
         { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
