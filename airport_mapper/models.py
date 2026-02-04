@@ -4,10 +4,11 @@ class Node:
         self.name = name
         self.exclusive = exclusive  # only one aircraft may occupy this node at a time
         self.occupied_by = None  # aircraft id or None
-    
+
     def is_free(self):
         return self.occupied_by is None
-    
+
+
 class Aircraft:
     def __init__(self, aircraft_id, start_node, goal_node, path):
         self.id = aircraft_id
@@ -24,13 +25,13 @@ class Aircraft:
     def step(self):
         if self.path_index + 1 >= len(self.path):
             return  # already at destination
-        
+
         next_node = self.path[self.path_index + 1]
 
         if next_node.exclusive and not next_node.is_free():
             self.waiting = True
             return
-        
+
         # Move
         self.current.occupied_by = None
         next_node.occupied_by = self.id
@@ -42,22 +43,22 @@ class Aircraft:
         # propose what node the aircraft wants next
         if self.done:
             return None
-        
+
         i = self.path_index + 1
         if i >= len(self.path):
             return None  # no move, already at goal
-        
+
         return self.path[i]
-    
+
     def propose_corridor(self, k=None):
         # return a list of nodes representing the corridor the aircraft wants to reserve
 
         if self.done or self.removed:
             return None
-        
+
         if k is None:
             k = self.lookahead
-        
+
         # next nodes along the path (skips current node)
         start = self.path_index + 1
         end = min(len(self.path), start + k)

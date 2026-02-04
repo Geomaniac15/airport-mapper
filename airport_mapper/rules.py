@@ -1,21 +1,23 @@
 from collections import defaultdict
+
 from airport_mapper.graph import graph, node_types
-from airport_mapper.planning import corridor_is_clear, collect_proposals
+from airport_mapper.planning import collect_proposals, corridor_is_clear
 
 holding_to_runway = set()
 
 for u, nbrs in graph.items():
-    if node_types.get(u) != 'H':
+    if node_types.get(u) != "H":
         continue
     for v in nbrs:
-        if node_types.get(v) == 'R':
+        if node_types.get(v) == "R":
             holding_to_runway.add((u, v))
+
 
 def runway_is_occupied(aircraft):
     return any(
-        (not ac.removed) and node_types.get(ac.current.name) == 'R'
-        for ac in aircraft
+        (not ac.removed) and node_types.get(ac.current.name) == "R" for ac in aircraft
     )
+
 
 def resolve_conflicts(proposals):
     # who is allowed to move
@@ -44,7 +46,7 @@ def resolve_conflicts(proposals):
         #     if candidates:
         #         ac, next_node = sorted(candidates, key=lambda x: x[0].id)[0]
         #         node_requests[next_node].append(ac)
-    
+
     approved = set()
     chosen_moves = {}
 
@@ -53,7 +55,7 @@ def resolve_conflicts(proposals):
         # two aircraft cannot be on the runway at the same time
         if node.exclusive and not node.is_free():
             continue
-        
+
         if not node.exclusive:
             # everyone can go
             for ac in requesters:
@@ -62,12 +64,15 @@ def resolve_conflicts(proposals):
         else:
             # aircraft with lowest id wins
             winner = sorted(
-                requesters, 
-                key=lambda a: (-a.wait_ticks, a.id)  # prioritise longest waiting, then lowest id
-                )[0]
+                requesters,
+                key=lambda a: (
+                    -a.wait_ticks,
+                    a.id,
+                ),  # prioritise longest waiting, then lowest id
+            )[0]
             approved.add(winner.id)
             chosen_moves[winner.id] = (winner, node)
-        
+
     vacated = {ac.current.name for ac_id, (ac, _next) in chosen_moves.items()}
 
     final_approved = set()
@@ -82,6 +87,7 @@ def resolve_conflicts(proposals):
 
     return final_approved
 
+
 def commit_moves(proposals, approved):
     # execute moves
 
@@ -93,28 +99,28 @@ def commit_moves(proposals, approved):
 
     if not movers:
         return False
-    
+
     # phase 1: vacate current nodes (simultaneous departure)
     for ac, _next in movers:
         ac.current.occupied_by = None
-    
+
     # phase 2: occupy next all next nodes (simultaneous arrival)
     for ac, next_node in movers:
         # safety check: if something else is already there
         # there is a bug in approval logic
         if next_node.exclusive and not next_node.is_free():
             raise RuntimeError(
-                f'Conflict detected during move commit: '
-                f'{ac.id} cannot move to occupied node {next_node.name}'
+                f"Conflict detected during move commit: "
+                f"{ac.id} cannot move to occupied node {next_node.name}"
             )
-        
+
         next_node.occupied_by = ac.id
         ac.current = next_node
 
         if ac.path_index >= len(ac.path):
-            raise RuntimeError(f'{ac.id} tried to step beyond end of path')
-        ac.path_index += 1 
-        
+            raise RuntimeError(f"{ac.id} tried to step beyond end of path")
+        ac.path_index += 1
+
         # if ac.current is not ac.path[ac.path_index]:
         #     raise RuntimeError(
         #         f'{ac.id} mismatch after move commit: current={ac.current.name} '
@@ -123,7 +129,7 @@ def commit_moves(proposals, approved):
 
         if ac.current.name == ac.goal:
             ac.done = True
-    
+
     return True
 
     # moved = False
@@ -135,14 +141,15 @@ def commit_moves(proposals, approved):
     #     ac.current.occupied_by = None
     #     next_node.occupied_by = ac.id
     #     ac.current = next_node
-    #     ac.path_index += 1 
+    #     ac.path_index += 1
 
     #     moved = True
-        
+
     #     if ac.current.name == 'RWY':
     #         ac.done = True
-    
+
     # return moved
+
 
 def is_blocked(ac, approved):
     cur = ac.current.name
@@ -161,17 +168,18 @@ def is_blocked(ac, approved):
         return False
     return ac.id not in approved
 
+
 def block_reason(ac, appproved, lookahead=3):
     if ac.removed or ac.done:
-        return 'DONE'
+        return "DONE"
     next = ac.propose_next()
     if next is None:
-        return 'NO_MOVE'
+        return "NO_MOVE"
     if ac.id in appproved:
-        return 'MOVED'
+        return "MOVED"
     if next.exclusive and not next.is_free():
-        return f'NEXT_OCCUPIED({next.name})'
+        return f"NEXT_OCCUPIED({next.name})"
     corridor = ac.propose_corridor(lookahead)
     if corridor and any(n.exclusive and not n.is_free() for n in corridor):
-        return 'CORRIDOR_BLOCKED'
-    return 'PRIORITY_BLOCKED'
+        return "CORRIDOR_BLOCKED"
+    return "PRIORITY_BLOCKED"

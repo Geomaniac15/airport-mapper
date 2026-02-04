@@ -1,21 +1,25 @@
 from airport_mapper.graph import graph
-from airport_mapper.main_sim import build_nodes, bfs_path, resolve_conflicts, commit_moves, loc
+from airport_mapper.main_sim import (bfs_path, build_nodes, commit_moves, loc,
+                                     resolve_conflicts)
 from airport_mapper.models import Aircraft, Node
 from airport_mapper.planning import collect_proposals
-from airport_mapper.rules import is_blocked, block_reason
+from airport_mapper.rules import block_reason, is_blocked
 from airport_mapper.scenarios import SCENARIOS
+
 
 def main_sim(SCENARIO):
     nodes = build_nodes()
     aircraft_list = []
 
     for spec in SCENARIO:
-        start = spec['start']
-        goal = spec['goal']
+        start = spec["start"]
+        goal = spec["goal"]
 
         path = bfs_path(graph, start, goal)
         if path is None:
-            raise ValueError(f"No path for {spec['aircraft_id']} from {start} to {goal}")
+            raise ValueError(
+                f"No path for {spec['aircraft_id']} from {start} to {goal}"
+            )
 
         # ac = Aircraft(
         #     spec['aircraft_id'],
@@ -23,22 +27,26 @@ def main_sim(SCENARIO):
         #     nodes[goal],
         #     [nodes[n] for n in path]
         # )
-        ac = Aircraft(spec['aircraft_id'], None, None, [nodes[n] for n in path])
+        ac = Aircraft(spec["aircraft_id"], None, None, [nodes[n] for n in path])
 
         ac.path_index = 0
         ac.current = ac.path[0]
         ac.goal = ac.path[-1].name
         ac.current.occupied_by = ac.id
-        
+
         aircraft_list.append(ac)
 
     # print(spec['aircraft_id'], 'path:', ' -> '.join(path))
-    assert path[-1] == goal, f'{spec["aircraft_id"]} path ends at {path[-1]}  not {goal}'
+    assert (
+        path[-1] == goal
+    ), f'{spec["aircraft_id"]} path ends at {path[-1]}  not {goal}'
 
     occupied = set()
     for ac in aircraft_list:
         if ac.current.name in occupied:
-            raise ValueError(f'Node {ac.current.name} occupied by multiple aircraft at start')
+            raise ValueError(
+                f"Node {ac.current.name} occupied by multiple aircraft at start"
+            )
         occupied.add(ac.current.name)
 
     # path1 = bfs_path(graph, aircraft_starting_positions['S1'], 'RWY')
@@ -55,7 +63,6 @@ def main_sim(SCENARIO):
     no_progress_steps = 0
 
     for t in range(10):
-
         # 0. debug for proposal and lookahead functionality
         # if ac.removed:
         #     continue
@@ -75,10 +82,11 @@ def main_sim(SCENARIO):
 
         for ac in aircraft_list:
             if ac.removed:
-                assert ac.current.occupied_by is None, f"{ac.id} removed but still occupying {ac.current.name}"
-            
+                assert (
+                    ac.current.occupied_by is None
+                ), f"{ac.id} removed but still occupying {ac.current.name}"
 
-        # 2. proposal phase   
+        # 2. proposal phase
         proposals = collect_proposals(aircraft_list)
 
         # print('RWY occupied by:', nodes['RWY'].occupied_by)
@@ -90,7 +98,7 @@ def main_sim(SCENARIO):
         moved_this_step = commit_moves(proposals, approved)
 
         # sanity check for a1 cause this is driving me insane
-        a1 = proposals.get('A1')
+        a1 = proposals.get("A1")
         if a1:
             ac, next_node, corridor = a1
             # print(f'''A1 debug:
@@ -107,7 +115,7 @@ def main_sim(SCENARIO):
             expected = ac.path[ac.path_index]
             if ac.current is not expected:
                 raise RuntimeError(
-                    f'{ac.id} mismatch after move commit: current={ac.current.name} path_index={ac.path_index} expected={expected.name}'
+                    f"{ac.id} mismatch after move commit: current={ac.current.name} path_index={ac.path_index} expected={expected.name}"
                 )
             # if is_blocked(ac, approved):
             #     reason = block_reason(ac, approved)
@@ -124,7 +132,6 @@ def main_sim(SCENARIO):
         #             f'{ac.id} mismatch: current={ac.current.name} path_index={ac.path_index} path_node={ac.path[ac.path_index].name}'
         #         )
 
-
         # 5. check for deadlock
         if not moved_this_step:
             no_progress_steps += 1
@@ -135,13 +142,10 @@ def main_sim(SCENARIO):
             no_progress_steps = 0
 
         # 6. observation
-        #print(f't={t}: A1 at {loc(aircraft1)}, A2 at {loc(aircraft2)}')
-        
-        print(f"t={t}: " +
-            ", ".join(
-                f"{ac.id} at {loc(ac)}" for ac in aircraft_list)
-            )
-        
+        # print(f't={t}: A1 at {loc(aircraft1)}, A2 at {loc(aircraft2)}')
+
+        print(f"t={t}: " + ", ".join(f"{ac.id} at {loc(ac)}" for ac in aircraft_list))
+
         if all(ac.removed for ac in aircraft_list):
             print("All aircraft finished. Stopping simulation.")
             break
@@ -150,6 +154,7 @@ def main_sim(SCENARIO):
 
     # print(bfs_path(graph, 'S1', 'R2')) # Works
     # print(bfs_path(graph, 'S2', 'R2'))
+
 
 for SCENARIO_NAME, SCENARIO in SCENARIOS.items():
     print(f"Running scenario: {SCENARIO_NAME}")

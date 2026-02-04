@@ -1,6 +1,7 @@
-from collections import deque, defaultdict
-import time
 import heapq
+import time
+from collections import defaultdict, deque
+
 
 def corridor_is_clear(corridor):
     if corridor is None:
@@ -9,6 +10,7 @@ def corridor_is_clear(corridor):
         if node.exclusive and not node.is_free():
             return False
     return True
+
 
 def bfs_path(graph, start, goal):
     # Queue of nodes to explore
@@ -30,19 +32,20 @@ def bfs_path(graph, start, goal):
             if neighbour not in parent:
                 parent[neighbour] = current
                 queue.append(neighbour)
-    
+
     if goal not in parent:
         return None
-    
+
     # Reconstruct path by walking backwards
     path = []
     node = goal
     while node is not None:
         path.append(node)
         node = parent[node]
-    
+
     path.reverse()
     return path
+
 
 def dijkstra_path(graph_w, start, goal):
     pq = [(0.0, start)]
@@ -64,10 +67,10 @@ def dijkstra_path(graph_w, start, goal):
                 dist[v] = nd
                 prev[v] = u
                 heapq.heappush(pq, (nd, v))
-    
+
     if goal not in prev:
         return None
-    
+
     path = []
     cur = goal
     while cur is not None:
@@ -75,6 +78,7 @@ def dijkstra_path(graph_w, start, goal):
         cur = prev[cur]
 
     return list(reversed(path))
+
 
 def collect_proposals(aircraft_list):
     # where does each aircraft want to go
@@ -85,9 +89,9 @@ def collect_proposals(aircraft_list):
 
         next_node = ac.propose_next()
         corridor = ac.propose_corridor()
-        
+
         if next_node:
             proposals[ac.id] = (ac, next_node, corridor)
-    
+
     # print("Proposals:", {ac_id: node.name for ac_id, (ac, node) in proposals.items()})
     return proposals
