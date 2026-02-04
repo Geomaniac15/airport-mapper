@@ -2,7 +2,7 @@
 
 A discrete-time simulation of airport surface movement using a graph-based taxiway model.
 
-Aircraft taxi along a predefined airport graph from start nodes (stands) to goal nodes (runway or other stands), subject to safety and fairness constraints. The project explores whether simple local rules can produce safe, deadlock-free surface movement without global scheduling.
+Aircraft taxi along a predefined airport graph from start nodes (stands) to goal nodes (runway or aprons), subject to safety and fairness constraints. The project explores whether simple local rules can produce safe, deadlock-free surface movement without global scheduling.
 
 This is a simulation and research exploration only. It is **not** intended for real-world deployment.
 
@@ -95,17 +95,30 @@ Implemented rules include:
 
 ## Running the Simulation
 
-Scenarios are defined in the ``` SCENARIO ``` list in the ``` map.py ``` file. Each scenario specifies:
+Scenarios are defined in the ``` SCENARIOS ``` dictionary in the ``` scenarios.py ``` file. Each scenario specifies:
 - aircraft ID
 - start node
 - goal node
 
+Scenarios are accessed by using their respective scenario key.
+
 Example:
 ```bash
-SCENARIO = [
-    { 'aircraft_id': 'A1', 'start': 'S1', 'goal': 'RWY' },
-    { 'aircraft_id': 'A2', 'start': 'S2', 'goal': 'RWY' },
-]
+SCENARIOS = {
+    'two_departures': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N1' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
+    ],
+    'three_departures': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N45' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N1' },
+        { 'aircraft_id': 'A3', 'start': 'N993', 'goal': 'N2' },
+    ],
+    'stand_swap': [
+        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
+        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N789' },
+    ],
+}
 ```
 ---
 
@@ -114,7 +127,7 @@ SCENARIO = [
 
 ### Run
 ```bash
-python map.py
+python -m airport_mapper.main_sim
 ```
 
 ### Author
