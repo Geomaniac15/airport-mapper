@@ -1,9 +1,8 @@
 from airport_mapper.graph import graph
 from airport_mapper.main_sim import (bfs_path, build_nodes, commit_moves, loc,
                                      resolve_conflicts)
-from airport_mapper.models import Aircraft, Node
+from airport_mapper.models import Aircraft
 from airport_mapper.planning import collect_proposals
-from airport_mapper.rules import block_reason, is_blocked
 from airport_mapper.scenarios import SCENARIOS
 
 

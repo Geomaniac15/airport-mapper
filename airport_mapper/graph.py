@@ -3,7 +3,6 @@ import math
 import os
 
 import matplotlib.pyplot as plt
-import networkx as nx
 
 from airport_mapper.polyline_to_graph import haversine_m
 
@@ -99,9 +98,6 @@ def plot_route(path, node_pos, color, label=None, lw=2.5, offset_index=0, total=
         ys = [y + py * offset for y in ys]
 
     plt.plot(xs, ys, color=color, linewidth=lw, label=label, zorder=10)
-
-
-from airport_mapper.polyline_to_graph import haversine_m
 
 
 def build_weighted_graph(adjacency, node_pos):

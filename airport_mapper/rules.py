@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from airport_mapper.graph import graph, node_types
-from airport_mapper.planning import collect_proposals, corridor_is_clear
+from airport_mapper.planning import corridor_is_clear
 
 holding_to_runway = set()
 
@@ -22,9 +22,6 @@ def runway_is_occupied(aircraft):
 def resolve_conflicts(proposals):
     # who is allowed to move
     node_requests = defaultdict(list)
-
-    # eligible to move?
-    eligible = []
 
     # group requests by node
     for ac, next_node, corridor in proposals.values():

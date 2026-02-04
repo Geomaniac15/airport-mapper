@@ -41,7 +41,7 @@ def get_airport_aeroway_features_by_iata(iata: str) -> dict:
     )->.inside;
 
     // If area query returns nothing, fall back to around() using aerodrome node location
-    // (Overpass can't do if/else, so we just also do this and you'll merge results client-side.)
+    // Overpass can't do if/else, so we do this and merge results client-side.
     node["aeroway"="aerodrome"]["iata"="{iata}"]->.p;
     (
       way["aeroway"](around.p:10000);
@@ -78,4 +78,4 @@ for way in ways:
     )
 
 print(f"ways with geometry: {len(polylines)}")
-print(f"sample way:", polylines[0] if polylines else None)
+print("sample way:", polylines[0] if polylines else None)

@@ -27,7 +27,7 @@ def extract_stand_points(overpass_json, decimals=5):
 
         tags = e.get("tags", {}) or {}
         aeroway = tags.get("aeroway")
-        if tags.get("aeroway") in {"gate", "parking_position", "stand"}:
+        if aeroway in {"gate", "parking_position", "stand"}:
             lon = e.get("lon")
             lat = e.get("lat")
             if lon is not None and lat is not None:

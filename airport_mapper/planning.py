@@ -1,6 +1,5 @@
 import heapq
-import time
-from collections import defaultdict, deque
+from collections import deque
 
 
 def corridor_is_clear(corridor):

@@ -2,8 +2,6 @@
 #  defaultdict for grouping aircraft by requested node
 import json
 import os
-import time
-from collections import defaultdict, deque
 
 import matplotlib.pyplot as plt
 
@@ -11,12 +9,11 @@ from airport_mapper.graph import (build_weighted_graph, compress_graph,
                                   draw_graph, exclusive_nodes, graph,
                                   node_types, plot_route)
 from airport_mapper.models import Aircraft, Node
-from airport_mapper.planning import (bfs_path, collect_proposals,
-                                     corridor_is_clear, dijkstra_path)
+from airport_mapper.planning import collect_proposals, dijkstra_path
 from airport_mapper.polyline_to_graph import haversine_m
 from airport_mapper.rules import (block_reason, commit_moves, is_blocked,
                                   resolve_conflicts)
-from airport_mapper.scenarios import SCENARIOS, scenario_names
+from airport_mapper.scenarios import SCENARIOS
 
 # Load node positions from graph file
 HERE = os.path.dirname(__file__)
