@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
     colours = {"A1": "red", "A2": "orange", "A3": "purple"}
 
-    scenario = SCENARIOS["three_departures"]
+    scenario = SCENARIOS["swap_positions"]
     for i, spec in enumerate(scenario):
         ac_id = spec["aircraft_id"]
         start = spec["start"]
