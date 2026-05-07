@@ -1,7 +1,10 @@
 #  deque for FIFO queue, used for BFS
 #  defaultdict for grouping aircraft by requested node
+import argparse
+import itertools
 import json
 import os
+import sys
 
 import matplotlib.pyplot as plt
 
@@ -210,31 +213,97 @@ def get_distance_travelled(path, node_pos):
     return total_m
 
 
-if __name__ == "__main__":
-    print("\n")
-    result = run_scenario(SCENARIOS["three_departures"])
-    # print_events(result['history'], limit=30)
-    # print('\n')
-    # print_timeline(result['history'], 'A1')
-    aircraft_list = [ac.id for ac in result["aircraft"]]
-    # print_aircraft_timelines(aircraft_list)
-    print_timeline(result["history"], "A1")
-    print("\n")
+DEFAULT_COLOURS = [
+    'red', 'orange', 'purple', 'blue', 'green',
+    'magenta', 'brown', 'teal', 'olive', 'navy',
+]
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        prog='airport_mapper',
+        description='JFK airport surface movement simulator.',
+    )
+    parser.add_argument(
+        '--scenario', '-s',
+        default='three_departures',
+        help="scenario key from scenarios.py (default: 'three_departures')",
+    )
+    parser.add_argument(
+        '--list', '-l',
+        action='store_true',
+        help='list available scenarios and exit',
+    )
+    parser.add_argument(
+        '--max-steps',
+        type=int,
+        default=200,
+        help='maximum simulation ticks before forcing termination (default: 200)',
+    )
+    parser.add_argument(
+        '--no-plot',
+        action='store_true',
+        help='run headless without showing the matplotlib window',
+    )
+    parser.add_argument(
+        '--timeline',
+        metavar='AIRCRAFT_ID',
+        help='print a per-tick timeline for one aircraft (e.g. A1)',
+    )
+    return parser.parse_args(argv)
+
+
+def list_scenarios():
+    print('available scenarios:')
+    for name, spec in sorted(SCENARIOS.items()):
+        ids = ', '.join(s['aircraft_id'] for s in spec)
+        print(f'  {name:<22}  {len(spec)} aircraft  ({ids})')
+
+
+def main(argv=None):
+    args = parse_args(argv)
+
+    if args.list:
+        list_scenarios()
+        return 0
+
+    if args.scenario not in SCENARIOS:
+        print(f"error: unknown scenario '{args.scenario}'", file=sys.stderr)
+        print('run with --list to see available scenarios.', file=sys.stderr)
+        return 2
+
+    scenario = SCENARIOS[args.scenario]
+    print(f"running scenario: {args.scenario} ({len(scenario)} aircraft)\n")
+
+    result = run_scenario(scenario, max_steps=args.max_steps)
+
+    if args.timeline:
+        if args.timeline in result['history']['positions']:
+            print_timeline(result['history'], args.timeline)
+            print()
+        else:
+            print(
+                f"warning: aircraft '{args.timeline}' not in scenario, "
+                f'skipping timeline.',
+                file=sys.stderr,
+            )
+
     metrics = compute_metrics(result)
     print(metrics)
-    # plot_wait_ticks(result['history'])
+
+    if args.no_plot:
+        return 0
 
     draw_graph(graph, node_pos, node_types=node_types)
 
-    colours = {"A1": "red", "A2": "orange", "A3": "purple"}
+    colour_cycle = itertools.cycle(DEFAULT_COLOURS)
+    colours = {spec['aircraft_id']: next(colour_cycle) for spec in scenario}
 
-    scenario = SCENARIOS["swap_positions"]
     for i, spec in enumerate(scenario):
-        ac_id = spec["aircraft_id"]
-        start = spec["start"]
-        goal = spec["goal"]
-
-        path = dijkstra_path(compressed_graph, start, goal)
+        ac_id = spec['aircraft_id']
+        path = dijkstra_path(compressed_graph, spec['start'], spec['goal'])
+        if path is None:
+            continue
         plot_route(
             path,
             node_pos,
@@ -244,19 +313,11 @@ if __name__ == "__main__":
             total=len(scenario),
         )
 
+    plt.legend(loc='best', fontsize=8)
+    plt.title(f'scenario: {args.scenario}')
     plt.show()
+    return 0
 
-    # for scenario_name in scenario_names:
-    #     print(f"Running scenario: {scenario_name}")
-    #     result = run_scenario(SCENARIOS[scenario_name])
-    #     metrics = compute_metrics(result)
-    #     # print(metrics)
-    #     if 'A1' in [ac.id for ac in result['aircraft']]:
-    #         print_timeline(result['history'], 'A1')
-    #         print("\n")
-    #     if 'A2' in [ac.id for ac in result['aircraft']]:
-    #         print_timeline(result['history'], 'A2')
-    #         print("\n")
-    #     if 'A3' in [ac.id for ac in result['aircraft']]:
-    #         print_timeline(result['history'], 'A3')
-    #         print("\n")
+
+if __name__ == '__main__':
+    sys.exit(main())

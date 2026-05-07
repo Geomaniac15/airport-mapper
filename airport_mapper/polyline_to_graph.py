@@ -215,86 +215,86 @@ def extract_polylines(overpass_json, aeroway_types=None, decimals=5):
 # # n = next(iter(graph))
 # # print(f'sample node: {n}, degree {len(graph[n])}')
 
-HERE = os.path.dirname(__file__)
-with open(os.path.join(HERE, "overpass_data.json"), "r", encoding="utf-8") as f:
-    data = json.load(f)
+def build_jfk_graph(verbose=True):
+    """Rebuild jfk_graph_labeled.json from overpass_data.json.
 
-tagged_polylines = extract_polylines(
-    data,
-    decimals=5,
-    aeroway_types=EDGE_AEROWAYS,
-)
+    Only intended to be called when the underlying OSM data changes.
+    Importing this module no longer triggers a rebuild.
+    """
+    here = os.path.dirname(__file__)
+    with open(os.path.join(here, "overpass_data.json"), "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-stand_points = extract_stand_points(data)
-holding_pts = extract_holding_positions(data)
+    tagged_polylines = extract_polylines(
+        data,
+        decimals=5,
+        aeroway_types=EDGE_AEROWAYS,
+    )
 
-graph_typed, node_pos, key_to_node = build_graph_from_polylines(
-    tagged_polylines,
-    decimals=5,
-)
+    stand_points = extract_stand_points(data)
+    holding_pts = extract_holding_positions(data)
 
-node_type = label_nodes(
-    graph_typed,
-    node_pos,
-    stand_keys=set(),
-)
+    graph_typed, node_pos, _key_to_node = build_graph_from_polylines(
+        tagged_polylines,
+        decimals=5,
+    )
 
-# candidate notes: nodes with one taxilane incident edge
-candidates = []
-for n, nbrs in graph_typed.items():
-    incident = set()
-    for types in nbrs.values():
-        incident |= set(types)
+    node_type = label_nodes(
+        graph_typed,
+        node_pos,
+        stand_keys=set(),
+    )
 
-    if incident & EDGE_AEROWAYS:
-        candidates.append(n)
+    # candidate nodes: nodes with at least one taxilane-class incident edge
+    candidates = []
+    for n, nbrs in graph_typed.items():
+        incident = set()
+        for types in nbrs.values():
+            incident |= set(types)
+        if incident & EDGE_AEROWAYS:
+            candidates.append(n)
 
-print("candiate nodes (taxilane-adjacent):", len(candidates))
+    snapped = snap_points_to_graph(
+        stand_points, node_pos, candidates=candidates, max_dist_m=50
+    )
+    snapped_holding_pts = snap_points_to_graph(
+        holding_pts, node_pos, candidates=candidates, max_dist_m=30
+    )
 
-snapped = snap_points_to_graph(
-    stand_points, node_pos, candidates=candidates, max_dist_m=50
-)
+    for node in snapped.values():
+        node_type[node] = "S"
+    for node in snapped_holding_pts.values():
+        node_type[node] = "H"
 
-snapped_holding_pts = snap_points_to_graph(
-    holding_pts, node_pos, candidates=candidates, max_dist_m=30
-)
+    out = {
+        "adjacency": graph_to_adjacency(graph_typed),
+        "node_positions": node_pos,
+        "node_types": node_type,
+        "edge_types": {
+            n: {nbr: sorted(types) for nbr, types in nbrs.items()}
+            for n, nbrs in graph_typed.items()
+        },
+    }
 
-for node in snapped.values():
-    node_type[node] = "S"
+    with open(FILE, "w", encoding="utf-8") as f:
+        json.dump(out, f, indent=2)
 
-for node in snapped_holding_pts.values():
-    node_type[node] = "H"
+    if verbose:
+        counts = {"R": 0, "S": 0, "I": 0}
+        for t in node_type.values():
+            counts[t] = counts.get(t, 0) + 1
+        print(f"candidate nodes (taxilane-adjacent): {len(candidates)}")
+        print(f"polylines: {len(tagged_polylines)}")
+        print(f"nodes: {len(out['adjacency'])}")
+        print(f"edges: {sum(len(v) for v in out['adjacency'].values()) // 2}")
+        print(f"node type counts: {counts}")
+        print(f"wrote to: {FILE}")
+        print(f"stand points (OSM): {len(stand_points)}")
+        print(f"snapped to graph: {len(snapped)}")
+        print(f"unique S nodes: {len(set(snapped.values()))}")
 
-out = {
-    "adjacency": graph_to_adjacency(graph_typed),
-    "node_positions": node_pos,
-    "node_types": node_type,
-    "edge_types": {
-        n: {nbr: sorted(types) for nbr, types in nbrs.items()}
-        for n, nbrs in graph_typed.items()
-    },
-}
+    return out
 
-print("polylines:", len(tagged_polylines))
-print("nodes:", len(out["adjacency"]))
-print("edges:", sum(len(v) for v in out["adjacency"].values()) // 2)
 
-counts = {"R": 0, "S": 0, "I": 0}
-for t in node_type.values():
-    counts[t] = counts.get(t, 0) + 1
-print("node type counts:", counts)
-
-with open(FILE, "w", encoding="utf-8") as f:
-    json.dump(out, f, indent=2)
-
-print("wrote to:", FILE)
-
-print("stand points (OSM):", len(stand_points))
-print("snapped to graph:", len(snapped))
-print("unique S nodes:", len(set(snapped.values())))
-
-# draw_graph(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
-
-# print('\n')
-# print(out['adjacency'], pos=out['node_positions'], node_types=out['node_types'])
-# print('\n')
+if __name__ == "__main__":
+    build_jfk_graph()
