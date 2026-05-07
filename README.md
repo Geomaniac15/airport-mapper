@@ -6,6 +6,10 @@ Aircraft taxi along a predefined airport graph from start nodes (stands) to goal
 
 This is a simulation and research exploration only. It is **not** intended for real-world deployment.
 
+![Three aircraft taxiing across the JFK graph](demo.gif)
+
+*Three departures from JFK stands to runway holds. Faint lines show planned routes; solid markers show live aircraft positions. A2 visibly waits two ticks behind A1 at a shared intersection before the priority resolver releases it.*
+
 ---
 
 ## Motivation
@@ -64,14 +68,17 @@ Implemented rules include:
 ---
 
 **Current Features**
-- Graph-based airport surface model
-- BFS path planning
+- Graph-based airport surface model built from real OpenStreetMap data (JFK)
+- Dijkstra path planning over a haversine-weighted graph
+- Graph compression that collapses degree-2 intersections for shorter paths
 - Exclusive node collision avoidance
 - Corridor-based deadlock prevention
 - Wait-time based priority (fairness)
 - Deadlock detection and termination
 - Debug output explaining blocking reasons
 - Deterministic behaviour for identical scenarios
+- Animated playback with sub-tick interpolation, exportable as GIF
+- Command-line interface with multiple selectable scenarios
 
 ---
 
@@ -80,55 +87,86 @@ Implemented rules include:
 - Taxiway segments (edges) are not yet locked
 - All movements take one tick (no timing or speed model)
 - No sensor uncertainty or perception errors
-- No real-world airport geometry
+- All aircraft spawn simultaneously at t=0 (no staggered entry)
 
 ---
 
 **Planned Work**
 - Edge locking for single-lane taxiways
 - Staggered aircraft spawn times
-- Larger stress-test scenarios
-- Visualisation and animation of movements
-- Comparison of different priority policies
+- Larger stress-test scenarios (10+ aircraft)
+- Comparison of different priority policies (local rules vs. Conflict-Based Search)
+- Parameterise by IATA code so any airport can be loaded
 
 ---
 
 ## Running the Simulation
 
-Scenarios are defined in the ``` SCENARIOS ``` dictionary in the ``` scenarios.py ``` file. Each scenario specifies:
+Scenarios are defined in the `SCENARIOS` dictionary in `airport_mapper/scenarios.py`. Each scenario specifies:
 - aircraft ID
 - start node
 - goal node
 
-Scenarios are accessed by using their respective scenario key.
-
-Example:
-```bash
-SCENARIOS = {
-    'two_departures': [
-        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N1' },
-        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N2' },
-    ],
-    'three_departures': [
-        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N45' },
-        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N1' },
-        { 'aircraft_id': 'A3', 'start': 'N993', 'goal': 'N2' },
-    ],
-    'stand_swap': [
-        { 'aircraft_id': 'A1', 'start': 'N789', 'goal': 'N804' },
-        { 'aircraft_id': 'A2', 'start': 'N804', 'goal': 'N789' },
-    ],
-}
-```
----
-
 ### Requirements
 - Python 3.10+
+- `matplotlib` (for plotting and animation)
+- `pillow` (for GIF export)
+- `requests` (only needed if you re-run the OSM graph build)
+- `pytest` (only needed for tests)
+
+```bash
+pip install matplotlib pillow requests pytest
+```
 
 ### Run
+
+List the available scenarios:
+```bash
+python -m airport_mapper.main_sim --list
+```
+
+Run the default scenario with a static route plot:
 ```bash
 python -m airport_mapper.main_sim
 ```
+
+Run a specific scenario:
+```bash
+python -m airport_mapper.main_sim --scenario stand_swap
+```
+
+Play an animation in an interactive window:
+```bash
+python -m airport_mapper.main_sim --scenario three_departures --animate
+```
+
+Save the animation as a GIF:
+```bash
+python -m airport_mapper.main_sim --scenario three_departures --save-gif demo.gif
+```
+
+Print a per-tick timeline for a single aircraft, headless:
+```bash
+python -m airport_mapper.main_sim --scenario stand_swap --no-plot --timeline A1
+```
+
+Full flag reference: `python -m airport_mapper.main_sim --help`
+
+### Tests
+
+```bash
+python -m pytest tests/
+```
+
+### Rebuilding the JFK graph
+
+The labelled JFK graph (`airport_mapper/jfk_graph_labeled.json`) is treated as a versioned build artifact. If you change the OSM input or the labelling logic, regenerate it with:
+
+```bash
+python -m airport_mapper.polyline_to_graph
+```
+
+Importing the package no longer triggers a rebuild.
 
 ### Author
 

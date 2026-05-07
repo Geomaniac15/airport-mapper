@@ -250,6 +250,28 @@ def parse_args(argv=None):
         metavar='AIRCRAFT_ID',
         help='print a per-tick timeline for one aircraft (e.g. A1)',
     )
+    parser.add_argument(
+        '--animate',
+        action='store_true',
+        help='play an animation of the simulation instead of the static plot',
+    )
+    parser.add_argument(
+        '--save-gif',
+        metavar='PATH',
+        help='save the animation to the given .gif path (implies --animate)',
+    )
+    parser.add_argument(
+        '--fps',
+        type=int,
+        default=8,
+        help='animation frames per second (default: 8)',
+    )
+    parser.add_argument(
+        '--sub-frames',
+        type=int,
+        default=4,
+        help='frames per simulation tick for smoother motion (default: 4)',
+    )
     return parser.parse_args(argv)
 
 
@@ -291,7 +313,20 @@ def main(argv=None):
     metrics = compute_metrics(result)
     print(metrics)
 
-    if args.no_plot:
+    if args.no_plot and not args.save_gif:
+        return 0
+
+    if args.animate or args.save_gif:
+        from airport_mapper.animate import animate_simulation
+        animate_simulation(
+            result,
+            scenario,
+            node_pos,
+            save_path=args.save_gif,
+            fps=args.fps,
+            sub_frames=args.sub_frames,
+            title=f'scenario: {args.scenario}',
+        )
         return 0
 
     draw_graph(graph, node_pos, node_types=node_types)
