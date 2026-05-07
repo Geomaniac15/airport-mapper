@@ -106,7 +106,7 @@ def run_scenario(
 
             if ac.id in approved:
                 event["moved"].append(ac.id)
-            elif is_blocked(ac, approved):
+            elif is_blocked(ac, approved, aircraft_list):
                 reason = block_reason(ac, approved)
                 event["blocked"][ac.id] = reason
 

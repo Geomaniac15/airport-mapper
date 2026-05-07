@@ -148,7 +148,7 @@ def commit_moves(proposals, approved):
     # return moved
 
 
-def is_blocked(ac, approved):
+def is_blocked(ac, approved, aircraft_list=None):
     cur = ac.current.name
     # use propose_next() API from Aircraft model
     next_node = ac.propose_next()
@@ -156,7 +156,7 @@ def is_blocked(ac, approved):
 
     # holding position clearance rule
     if nxt is not None and (cur, nxt) in holding_to_runway:
-        if runway_is_occupied(ac.sim.aircraft_list):
+        if aircraft_list is not None and runway_is_occupied(aircraft_list):
             return True
 
     if ac.removed or ac.done:
@@ -166,13 +166,13 @@ def is_blocked(ac, approved):
     return ac.id not in approved
 
 
-def block_reason(ac, appproved, lookahead=3):
+def block_reason(ac, approved, lookahead=3):
     if ac.removed or ac.done:
         return "DONE"
     next = ac.propose_next()
     if next is None:
         return "NO_MOVE"
-    if ac.id in appproved:
+    if ac.id in approved:
         return "MOVED"
     if next.exclusive and not next.is_free():
         return f"NEXT_OCCUPIED({next.name})"
