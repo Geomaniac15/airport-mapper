@@ -52,14 +52,13 @@ def _aircraft_id(i):
     return f'A{i + 1}'
 
 
-def _generate_pairs(starts_pool, goals_pool, n, seed, allow_repeat_starts=False):
+def _generate_pairs(starts_pool, goals_pool, n, rng, allow_repeat_starts=False):
     'Sample n start->goal pairs that have a realisable Dijkstra path.'
 
     from airport_mapper.graph import get_compressed_graph
     from airport_mapper.planning import dijkstra_path
 
     compressed = get_compressed_graph()
-    rng = random.Random(seed)
 
     starts = sorted(starts_pool)
     goals = sorted(goals_pool)
@@ -97,42 +96,73 @@ def _generate_pairs(starts_pool, goals_pool, n, seed, allow_repeat_starts=False)
     return pairs
 
 
-def random_departures(n, seed=None):
-    '''Generate n stand -> runway departures with validated paths.'''
+def _spawn_ticks(n, rng, stagger):
+    'Sample n spawn ticks uniformly in [0, stagger]. stagger=0 -> all zero.'
+
+    if stagger <= 0:
+        return [0] * n
+    return [rng.randint(0, stagger) for _ in range(n)]
+
+
+def random_departures(n, seed=None, stagger=0):
+    '''Generate n stand -> runway departures with validated paths.
+
+    If stagger > 0, each aircraft is given a spawn_tick chosen uniformly in
+    [0, stagger], modelling staggered pushbacks rather than a simultaneous
+    rush at t=0.
+    '''
 
     from airport_mapper.graph import runway_nodes, stand_nodes
-    pairs = _generate_pairs(stand_nodes, runway_nodes, n, seed)
+    rng = random.Random(seed)
+    pairs = _generate_pairs(stand_nodes, runway_nodes, n, rng)
+    spawns = _spawn_ticks(n, rng, stagger)
     return [
-        {'aircraft_id': _aircraft_id(i), 'start': s, 'goal': g}
-        for i, (s, g) in enumerate(pairs)
+        {
+            'aircraft_id': _aircraft_id(i),
+            'start': s,
+            'goal': g,
+            'spawn_tick': st,
+        }
+        for i, ((s, g), st) in enumerate(zip(pairs, spawns))
     ]
 
 
-def random_arrivals(n, seed=None):
+def random_arrivals(n, seed=None, stagger=0):
     '''Generate n runway -> stand arrivals with validated paths.
 
     Note: this is an idealisation. Real arrivals exit the runway via a
     rapid-exit taxiway rather than starting on the runway centreline.
     '''
-    
+
     from airport_mapper.graph import runway_nodes, stand_nodes
+    rng = random.Random(seed)
     pairs = _generate_pairs(
-        runway_nodes, stand_nodes, n, seed, allow_repeat_starts=True,
+        runway_nodes, stand_nodes, n, rng, allow_repeat_starts=True,
     )
+    spawns = _spawn_ticks(n, rng, stagger)
     return [
-        {'aircraft_id': _aircraft_id(i), 'start': s, 'goal': g}
-        for i, (s, g) in enumerate(pairs)
+        {
+            'aircraft_id': _aircraft_id(i),
+            'start': s,
+            'goal': g,
+            'spawn_tick': st,
+        }
+        for i, ((s, g), st) in enumerate(zip(pairs, spawns))
     ]
 
 
-def random_mixed(n, seed=None):
-    '''Generate n aircraft, alternating departures and arrivals.'''
+def random_mixed(n, seed=None, stagger=0):
+    'Generate n aircraft, alternating departures and arrivals.'
 
     rng = random.Random(seed)
     n_dep = (n + 1) // 2
     n_arr = n - n_dep
-    deps = random_departures(n_dep, seed=rng.randint(0, 2**31 - 1))
-    arrs = random_arrivals(n_arr, seed=rng.randint(0, 2**31 - 1))
+    deps = random_departures(
+        n_dep, seed=rng.randint(0, 2**31 - 1), stagger=stagger,
+    )
+    arrs = random_arrivals(
+        n_arr, seed=rng.randint(0, 2**31 - 1), stagger=stagger,
+    )
 
     # Interleave so the IDs aren't all-departures-first.
     merged = []

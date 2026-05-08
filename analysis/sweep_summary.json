@@ -1,0 +1,252 @@
+[
+  {
+    "n": 5,
+    "stagger": 0,
+    "runs": 10,
+    "deadlock_rate": 0.0,
+    "mean_steps_completed": 44.6,
+    "std_steps_completed": 5.82,
+    "mean_blocked_per_ac": 0.1,
+    "mean_taxi_duration": 28.8
+  },
+  {
+    "n": 5,
+    "stagger": 5,
+    "runs": 10,
+    "deadlock_rate": 0.0,
+    "mean_steps_completed": 46.5,
+    "std_steps_completed": 5.76,
+    "mean_blocked_per_ac": 0.12,
+    "mean_taxi_duration": 28.82
+  },
+  {
+    "n": 5,
+    "stagger": 10,
+    "runs": 10,
+    "deadlock_rate": 0.0,
+    "mean_steps_completed": 48.7,
+    "std_steps_completed": 5.91,
+    "mean_blocked_per_ac": 0.08,
+    "mean_taxi_duration": 28.78
+  },
+  {
+    "n": 5,
+    "stagger": 20,
+    "runs": 10,
+    "deadlock_rate": 0.0,
+    "mean_steps_completed": 55.7,
+    "std_steps_completed": 3.97,
+    "mean_blocked_per_ac": 0.2,
+    "mean_taxi_duration": 28.9
+  },
+  {
+    "n": 5,
+    "stagger": 40,
+    "runs": 10,
+    "deadlock_rate": 0.0,
+    "mean_steps_completed": 68.7,
+    "std_steps_completed": 4.14,
+    "mean_blocked_per_ac": 0.06,
+    "mean_taxi_duration": 28.76
+  },
+  {
+    "n": 10,
+    "stagger": 0,
+    "runs": 10,
+    "deadlock_rate": 0.1,
+    "mean_steps_completed": 49.33,
+    "std_steps_completed": 7.26,
+    "mean_blocked_per_ac": 0.622,
+    "mean_taxi_duration": 30.46
+  },
+  {
+    "n": 10,
+    "stagger": 5,
+    "runs": 10,
+    "deadlock_rate": 0.1,
+    "mean_steps_completed": 51.89,
+    "std_steps_completed": 6.51,
+    "mean_blocked_per_ac": 0.689,
+    "mean_taxi_duration": 30.52
+  },
+  {
+    "n": 10,
+    "stagger": 10,
+    "runs": 10,
+    "deadlock_rate": 0.1,
+    "mean_steps_completed": 55.67,
+    "std_steps_completed": 5.34,
+    "mean_blocked_per_ac": 0.667,
+    "mean_taxi_duration": 30.5
+  },
+  {
+    "n": 10,
+    "stagger": 20,
+    "runs": 10,
+    "deadlock_rate": 0.2,
+    "mean_steps_completed": 61.5,
+    "std_steps_completed": 4.44,
+    "mean_blocked_per_ac": 0.438,
+    "mean_taxi_duration": 30.65
+  },
+  {
+    "n": 10,
+    "stagger": 40,
+    "runs": 10,
+    "deadlock_rate": 0.0,
+    "mean_steps_completed": 77.1,
+    "std_steps_completed": 6.4,
+    "mean_blocked_per_ac": 0.5,
+    "mean_taxi_duration": 30.64
+  },
+  {
+    "n": 15,
+    "stagger": 0,
+    "runs": 10,
+    "deadlock_rate": 0.2,
+    "mean_steps_completed": 52.75,
+    "std_steps_completed": 8.07,
+    "mean_blocked_per_ac": 1.492,
+    "mean_taxi_duration": 31.27
+  },
+  {
+    "n": 15,
+    "stagger": 5,
+    "runs": 10,
+    "deadlock_rate": 0.2,
+    "mean_steps_completed": 55.25,
+    "std_steps_completed": 7.55,
+    "mean_blocked_per_ac": 1.625,
+    "mean_taxi_duration": 31.41
+  },
+  {
+    "n": 15,
+    "stagger": 10,
+    "runs": 10,
+    "deadlock_rate": 0.2,
+    "mean_steps_completed": 59.12,
+    "std_steps_completed": 9.09,
+    "mean_blocked_per_ac": 1.758,
+    "mean_taxi_duration": 30.76
+  },
+  {
+    "n": 15,
+    "stagger": 20,
+    "runs": 10,
+    "deadlock_rate": 0.1,
+    "mean_steps_completed": 64.67,
+    "std_steps_completed": 6.5,
+    "mean_blocked_per_ac": 1.304,
+    "mean_taxi_duration": 31.05
+  },
+  {
+    "n": 15,
+    "stagger": 40,
+    "runs": 10,
+    "deadlock_rate": 0.1,
+    "mean_steps_completed": 79.22,
+    "std_steps_completed": 6.24,
+    "mean_blocked_per_ac": 1.319,
+    "mean_taxi_duration": 31.07
+  },
+  {
+    "n": 20,
+    "stagger": 0,
+    "runs": 10,
+    "deadlock_rate": 0.5,
+    "mean_steps_completed": 56.4,
+    "std_steps_completed": 4.83,
+    "mean_blocked_per_ac": 2.77,
+    "mean_taxi_duration": 32.31
+  },
+  {
+    "n": 20,
+    "stagger": 5,
+    "runs": 10,
+    "deadlock_rate": 0.4,
+    "mean_steps_completed": 57.83,
+    "std_steps_completed": 2.86,
+    "mean_blocked_per_ac": 3.075,
+    "mean_taxi_duration": 32.21
+  },
+  {
+    "n": 20,
+    "stagger": 10,
+    "runs": 10,
+    "deadlock_rate": 0.4,
+    "mean_steps_completed": 62.17,
+    "std_steps_completed": 2.14,
+    "mean_blocked_per_ac": 2.958,
+    "mean_taxi_duration": 32.09
+  },
+  {
+    "n": 20,
+    "stagger": 20,
+    "runs": 10,
+    "deadlock_rate": 0.7,
+    "mean_steps_completed": 68,
+    "std_steps_completed": 2.0,
+    "mean_blocked_per_ac": 2.2,
+    "mean_taxi_duration": 30.97
+  },
+  {
+    "n": 20,
+    "stagger": 40,
+    "runs": 10,
+    "deadlock_rate": 0.2,
+    "mean_steps_completed": 83.12,
+    "std_steps_completed": 4.26,
+    "mean_blocked_per_ac": 1.331,
+    "mean_taxi_duration": 31.09
+  },
+  {
+    "n": 25,
+    "stagger": 0,
+    "runs": 10,
+    "deadlock_rate": 0.6,
+    "mean_steps_completed": 64.25,
+    "std_steps_completed": 7.59,
+    "mean_blocked_per_ac": 4.56,
+    "mean_taxi_duration": 35.21
+  },
+  {
+    "n": 25,
+    "stagger": 5,
+    "runs": 10,
+    "deadlock_rate": 0.6,
+    "mean_steps_completed": 67,
+    "std_steps_completed": 8.83,
+    "mean_blocked_per_ac": 4.73,
+    "mean_taxi_duration": 35.1
+  },
+  {
+    "n": 25,
+    "stagger": 10,
+    "runs": 10,
+    "deadlock_rate": 0.5,
+    "mean_steps_completed": 70.6,
+    "std_steps_completed": 7.27,
+    "mean_blocked_per_ac": 4.608,
+    "mean_taxi_duration": 34.7
+  },
+  {
+    "n": 25,
+    "stagger": 20,
+    "runs": 10,
+    "deadlock_rate": 0.4,
+    "mean_steps_completed": 76.33,
+    "std_steps_completed": 6.47,
+    "mean_blocked_per_ac": 3.267,
+    "mean_taxi_duration": 33.82
+  },
+  {
+    "n": 25,
+    "stagger": 40,
+    "runs": 10,
+    "deadlock_rate": 0.4,
+    "mean_steps_completed": 89.67,
+    "std_steps_completed": 6.02,
+    "mean_blocked_per_ac": 2.787,
+    "mean_taxi_duration": 33.45
+  }
+]

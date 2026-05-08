@@ -10,7 +10,7 @@ class Node:
 
 
 class Aircraft:
-    def __init__(self, aircraft_id, start_node, goal_node, path):
+    def __init__(self, aircraft_id, start_node, goal_node, path, spawn_tick=0):
         self.id = aircraft_id
         self.current = start_node
         self.goal = goal_node
@@ -21,8 +21,15 @@ class Aircraft:
         self.removed = False
         self.lookahead = 3  # how many nodes ahead to consider for corridor proposal
         self.wait_ticks = 0  # how many consecutive ticks the aircraft has been waiting
+        # Staggered spawn support. Aircraft does not interact with the simulation
+        # (no proposals, no node occupation) until `spawned` is True.
+        self.spawn_tick = spawn_tick
+        self.spawned = False
+        self.spawned_at = None  # the simulation tick when spawn actually happened
 
     def step(self):
+        if not self.spawned:
+            return  # not yet in the simulation
         if self.path_index + 1 >= len(self.path):
             return  # already at destination
 
@@ -41,7 +48,7 @@ class Aircraft:
 
     def propose_next(self):
         # propose what node the aircraft wants next
-        if self.done:
+        if not self.spawned or self.done:
             return None
 
         i = self.path_index + 1
@@ -53,7 +60,7 @@ class Aircraft:
     def propose_corridor(self, k=None):
         # return a list of nodes representing the corridor the aircraft wants to reserve
 
-        if self.done or self.removed:
+        if not self.spawned or self.done or self.removed:
             return None
 
         if k is None:

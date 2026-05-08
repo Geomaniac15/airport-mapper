@@ -23,7 +23,11 @@ compressed_graph = get_compressed_graph()
 
 
 def loc(ac):
-    return "AIRBORNE" if ac.removed else ac.current.name
+    if not ac.spawned:
+        return "PRESPAWN"
+    if ac.removed:
+        return "AIRBORNE"
+    return ac.current.name
 
 
 def build_nodes():
@@ -40,6 +44,7 @@ def run_scenario(
     for spec in scenario:
         start = spec["start"]
         goal = spec["goal"]
+        spawn_tick = spec.get("spawn_tick", 0)
 
         # path = bfs_path(graph, start, goal)
         path = dijkstra_path(compressed_graph, start, goal)
@@ -48,12 +53,19 @@ def run_scenario(
                 f"No path for {spec['aircraft_id']} from {start} to {goal}"
             )
 
-        ac = Aircraft(spec["aircraft_id"], None, None, [nodes[n] for n in path])
+        ac = Aircraft(
+            spec["aircraft_id"],
+            None,
+            None,
+            [nodes[n] for n in path],
+            spawn_tick=spawn_tick,
+        )
 
         ac.path_index = 0
         ac.current = ac.path[0]
         ac.goal = ac.path[-1]
-        ac.current.occupied_by = ac.id
+        # Note: do NOT occupy the start node here. Occupation happens at the
+        # tick when the aircraft actually spawns into the simulation.
 
         aircraft_list.append(ac)
 
@@ -67,6 +79,16 @@ def run_scenario(
     }
 
     for t in range(max_steps):
+        # Spawn step: bring any due aircraft into the simulation. An aircraft
+        # waits past its spawn_tick if its start node is exclusive and busy.
+        for ac in aircraft_list:
+            if ac.spawned or ac.spawn_tick > t:
+                continue
+            if ac.current.is_free() or not ac.current.exclusive:
+                ac.spawned = True
+                ac.spawned_at = t
+                ac.current.occupied_by = ac.id
+
         for ac in aircraft_list:
             if ac.done and not ac.removed:
                 ac.current.occupied_by = None
@@ -113,7 +135,14 @@ def run_scenario(
         if event["moved"] or event["blocked"]:
             history["events"].append(event)
 
-        if moved:
+        # Deadlock check: only count "no progress" if there are spawned, active
+        # aircraft that should be moving. While aircraft are still pre-spawn
+        # we do not increment the counter, otherwise staggered scenarios would
+        # falsely trip deadlock during the warm-up window.
+        spawned_active = any(
+            ac.spawned and not ac.done and not ac.removed for ac in aircraft_list
+        )
+        if moved or not spawned_active:
             no_progress = 0
         else:
             no_progress += 1
@@ -121,7 +150,9 @@ def run_scenario(
                 deadlock = True
                 break
 
-        if all(ac.removed for ac in aircraft_list):
+        # End condition: all spawned aircraft removed AND no more pending spawns.
+        all_spawned = all(ac.spawned for ac in aircraft_list)
+        if all_spawned and all(ac.removed for ac in aircraft_list):
             break
 
     print(f"Scenario completed in {t} steps. Deadlock: {deadlock}")
@@ -150,11 +181,21 @@ def compute_metrics(result):
         time_to_airborne = next(
             (t for t, p in enumerate(positions) if p == "AIRBORNE"), None
         )
+        first_active = next(
+            (t for t, p in enumerate(positions) if p not in ("PRESPAWN", "AIRBORNE")),
+            None,
+        )
+        if time_to_airborne is not None and first_active is not None:
+            taxi_duration = time_to_airborne - first_active
+        else:
+            taxi_duration = None
 
         distance_m = round(get_distance_travelled(positions, node_pos), 1)
 
         metrics["aircraft"][a_id] = {
             "time_to_airborne": time_to_airborne,
+            "spawned_at": first_active,
+            "taxi_duration": taxi_duration,
             "total_blocked_ticks": sum(1 for w in waits if w > 0),
             "max_wait_ticks": max(waits) if waits else 0,
             "distance_travelled_m": f"{distance_m} m",
@@ -202,6 +243,10 @@ def get_distance_travelled(path, node_pos):
     for a, b in zip(path, path[1:]):
         if a == "AIRBORNE" or b == "AIRBORNE":
             break
+        if a not in node_pos or b not in node_pos:
+            # PRESPAWN entries (and any other non-graph sentinel) contribute
+            # no distance.
+            continue
         total_m += haversine_m(node_pos[a], node_pos[b])
 
     return total_m
@@ -292,6 +337,13 @@ def parse_args(argv=None):
         default=None,
         help='RNG seed for reproducible random scenarios',
     )
+    random_group.add_argument(
+        '--stagger',
+        type=int,
+        default=0,
+        metavar='MAX_TICK',
+        help='spread spawn times uniformly in [0, MAX_TICK] for random scenarios (default: 0, all spawn at t=0)',
+    )
 
     return parser.parse_args(argv)
 
@@ -328,12 +380,17 @@ def main(argv=None):
     if active_random:
         kind, n, fn = active_random[0]
         try:
-            scenario = fn(n, seed=args.seed)
+            scenario = fn(n, seed=args.seed, stagger=args.stagger)
         except ValueError as e:
             print(f'error generating random scenario: {e}', file=sys.stderr)
             return 2
-        seed_suffix = f' seed={args.seed}' if args.seed is not None else ''
-        scenario_label = f'{kind}({n}){seed_suffix}'
+        suffix_parts = []
+        if args.seed is not None:
+            suffix_parts.append(f'seed={args.seed}')
+        if args.stagger > 0:
+            suffix_parts.append(f'stagger={args.stagger}')
+        suffix = (' ' + ' '.join(suffix_parts)) if suffix_parts else ''
+        scenario_label = f'{kind}({n}){suffix}'
     else:
         if args.scenario not in SCENARIOS:
             print(f"error: unknown scenario '{args.scenario}'", file=sys.stderr)
