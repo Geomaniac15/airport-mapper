@@ -28,7 +28,7 @@ def _safe_mean(xs):
     return mean(xs) if xs else None
 
 
-def run_one(n, stagger, seed, max_steps=600):
+def run_one(n, stagger, seed, max_steps=2000):
     'Run a single simulation and return a flat dict of metrics.'
     scenario = random_departures(n, seed=seed, stagger=stagger)
     t0 = time.perf_counter()

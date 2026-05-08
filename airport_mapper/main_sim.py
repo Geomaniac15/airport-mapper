@@ -9,8 +9,9 @@ import sys
 import matplotlib.pyplot as plt
 
 from airport_mapper.graph import (draw_graph, exclusive_nodes,
-                                  get_compressed_graph, graph, node_pos,
-                                  node_types, plot_route)
+                                  expand_compressed_path,
+                                  get_compressed_chains, get_compressed_graph,
+                                  graph, node_pos, node_types, plot_route)
 from airport_mapper.models import Aircraft, Node
 from airport_mapper.planning import collect_proposals, dijkstra_path
 from airport_mapper.polyline_to_graph import haversine_m
@@ -20,6 +21,7 @@ from airport_mapper.scenarios import (SCENARIOS, random_arrivals,
                                       random_departures, random_mixed)
 
 compressed_graph = get_compressed_graph()
+compressed_chains = get_compressed_chains()
 
 
 def loc(ac):
@@ -46,12 +48,15 @@ def run_scenario(
         goal = spec["goal"]
         spawn_tick = spec.get("spawn_tick", 0)
 
-        # path = bfs_path(graph, start, goal)
-        path = dijkstra_path(compressed_graph, start, goal)
-        if path is None:
+        # Plan on the compressed graph (cheap), then expand the path back to
+        # raw graph nodes so the simulator visits every real intermediate
+        # node and the timeline output matches jfk_graph.json adjacency.
+        compressed_path = dijkstra_path(compressed_graph, start, goal)
+        if compressed_path is None:
             raise ValueError(
                 f"No path for {spec['aircraft_id']} from {start} to {goal}"
             )
+        path = expand_compressed_path(compressed_path, compressed_chains)
 
         ac = Aircraft(
             spec["aircraft_id"],

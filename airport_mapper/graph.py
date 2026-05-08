@@ -25,17 +25,32 @@ stand_nodes = {node for node, ntype in node_types.items() if ntype == "S"}
 runway_nodes = {node for node, ntype in node_types.items() if ntype == "R"}
 
 # Lazy cache of the compressed weighted graph used for path planning.
-# Built on first access so module import stays cheap.
+# Built on first access so module import stays cheap. Also caches the chain
+# expansion mapping so callers can recover the raw-node path after planning.
 _compressed_graph_cache = None
+_compressed_chains_cache = None
+
+
+def _build_compressed_cache():
+    global _compressed_graph_cache, _compressed_chains_cache
+    weighted = build_weighted_graph(graph, node_pos)
+    cg, ch = compress_graph(weighted, node_types, return_chains=True)
+    _compressed_graph_cache = cg
+    _compressed_chains_cache = ch
 
 
 def get_compressed_graph():
     'Return the haversine-weighted, intersection-compressed graph (cached).'
-    global _compressed_graph_cache
     if _compressed_graph_cache is None:
-        weighted = build_weighted_graph(graph, node_pos)
-        _compressed_graph_cache = compress_graph(weighted, node_types)
+        _build_compressed_cache()
     return _compressed_graph_cache
+
+
+def get_compressed_chains():
+    'Return the {(u, v): [intermediate raw nodes]} mapping (cached).'
+    if _compressed_chains_cache is None:
+        _build_compressed_cache()
+    return _compressed_chains_cache
 
 
 def draw_graph(adjacency, pos, node_types=None, label_nodes=False):
@@ -129,11 +144,18 @@ def build_weighted_graph(adjacency, node_pos):
     return weighted
 
 
-def compress_graph(graph_w, node_types):
+def compress_graph(graph_w, node_types, return_chains=False):
+    '''Collapse chains of degree-2 intersection nodes into single edges.
+
+    If return_chains is True, also returns a dict mapping (u, v) -> the
+    sequence of intermediate raw nodes between u and v. The mapping is
+    symmetric: chains[(u, v)] is the reverse of chains[(v, u)].
+    '''
     def is_compressible(n):
         return node_types.get(n) == "I" and len(graph_w[n]) == 2
 
     new_graph = {}
+    chains = {}
     visited = set()
 
     for n in graph_w:
@@ -150,6 +172,7 @@ def compress_graph(graph_w, node_types):
                 continue
 
             path_len = graph_w[n][nbr]
+            chain = []  # intermediate raw nodes between n and the chain end
             prev = n
             cur = nbr
 
@@ -157,6 +180,7 @@ def compress_graph(graph_w, node_types):
             while is_compressible(cur):
                 visited.add((prev, cur))
                 visited.add((cur, prev))
+                chain.append(cur)
 
                 a, b = list(graph_w[cur].keys())
 
@@ -173,7 +197,32 @@ def compress_graph(graph_w, node_types):
             new_graph[n][cur] = path_len
             new_graph[cur][n] = path_len
 
+            chains[(n, cur)] = chain
+            chains[(cur, n)] = list(reversed(chain))
+
             visited.add((n, nbr))
             visited.add((nbr, n))
 
+    if return_chains:
+        return new_graph, chains
     return new_graph
+
+
+def expand_compressed_path(compressed_path, chains):
+    '''Expand a path on the compressed graph back to the full raw path.
+
+    For each consecutive pair (u, v) in the compressed path, splices in the
+    intermediate chain nodes from chains[(u, v)] so the resulting path is
+    edge-by-edge adjacent in the raw graph.
+    '''
+    if compressed_path is None:
+        return None
+    if len(compressed_path) < 2:
+        return list(compressed_path)
+
+    raw = [compressed_path[0]]
+    for u, v in zip(compressed_path, compressed_path[1:]):
+        chain = chains.get((u, v), [])
+        raw.extend(chain)
+        raw.append(v)
+    return raw
