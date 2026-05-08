@@ -1,3 +1,16 @@
+'''Hand-authored and procedurally generated scenarios.
+
+SCENARIOS holds named scenarios with hand-picked JFK node IDs that exercise
+specific behaviours (deadlock, runway contention, stand swap, etc.).
+
+random_departures, random_arrivals, and random_mixed generate scenarios on
+the fly from the loaded graph. They validate path reachability so every
+generated aircraft has a realisable route.
+'''
+
+import random
+
+
 # JFK Graph scenarios using real node IDs from the largest connected component
 # Stands in main component: N789, N804, N805, N806, N808, etc.
 # Runways in main component: N1, N2, N3, N4, N5, etc.
@@ -33,3 +46,102 @@ SCENARIOS = {
 }
 
 scenario_names = list(SCENARIOS.keys())
+
+
+def _aircraft_id(i):
+    return f'A{i + 1}'
+
+
+def _generate_pairs(starts_pool, goals_pool, n, seed, allow_repeat_starts=False):
+    'Sample n start->goal pairs that have a realisable Dijkstra path.'
+
+    from airport_mapper.graph import get_compressed_graph
+    from airport_mapper.planning import dijkstra_path
+
+    compressed = get_compressed_graph()
+    rng = random.Random(seed)
+
+    starts = sorted(starts_pool)
+    goals = sorted(goals_pool)
+
+    if not starts or not goals:
+        raise ValueError(
+            f'cannot generate scenario: '
+            f'{len(starts)} starts, {len(goals)} goals available'
+        )
+
+    pairs = []
+    used_starts = set()
+    max_attempts = max(n * 30, 200)
+    attempts = 0
+
+    while len(pairs) < n and attempts < max_attempts:
+        attempts += 1
+        start = rng.choice(starts)
+        if not allow_repeat_starts and start in used_starts:
+            continue
+        goal = rng.choice(goals)
+        if start == goal:
+            continue
+        if dijkstra_path(compressed, start, goal) is None:
+            continue
+        used_starts.add(start)
+        pairs.append((start, goal))
+
+    if len(pairs) < n:
+        raise ValueError(
+            f'could only generate {len(pairs)} of {n} requested aircraft '
+            f'after {attempts} attempts (graph connectivity may be sparse)'
+        )
+
+    return pairs
+
+
+def random_departures(n, seed=None):
+    '''Generate n stand -> runway departures with validated paths.'''
+
+    from airport_mapper.graph import runway_nodes, stand_nodes
+    pairs = _generate_pairs(stand_nodes, runway_nodes, n, seed)
+    return [
+        {'aircraft_id': _aircraft_id(i), 'start': s, 'goal': g}
+        for i, (s, g) in enumerate(pairs)
+    ]
+
+
+def random_arrivals(n, seed=None):
+    '''Generate n runway -> stand arrivals with validated paths.
+
+    Note: this is an idealisation. Real arrivals exit the runway via a
+    rapid-exit taxiway rather than starting on the runway centreline.
+    '''
+    
+    from airport_mapper.graph import runway_nodes, stand_nodes
+    pairs = _generate_pairs(
+        runway_nodes, stand_nodes, n, seed, allow_repeat_starts=True,
+    )
+    return [
+        {'aircraft_id': _aircraft_id(i), 'start': s, 'goal': g}
+        for i, (s, g) in enumerate(pairs)
+    ]
+
+
+def random_mixed(n, seed=None):
+    '''Generate n aircraft, alternating departures and arrivals.'''
+
+    rng = random.Random(seed)
+    n_dep = (n + 1) // 2
+    n_arr = n - n_dep
+    deps = random_departures(n_dep, seed=rng.randint(0, 2**31 - 1))
+    arrs = random_arrivals(n_arr, seed=rng.randint(0, 2**31 - 1))
+
+    # Interleave so the IDs aren't all-departures-first.
+    merged = []
+    for i in range(max(len(deps), len(arrs))):
+        if i < len(deps):
+            merged.append(deps[i])
+        if i < len(arrs):
+            merged.append(arrs[i])
+    # Renumber sequentially after the interleave.
+    for i, spec in enumerate(merged):
+        spec['aircraft_id'] = _aircraft_id(i)
+    return merged

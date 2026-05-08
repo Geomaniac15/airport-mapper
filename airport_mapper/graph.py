@@ -13,6 +13,7 @@ with open(os.path.join(HERE, "jfk_graph_labeled.json"), "r", encoding="utf-8") a
 
 graph = _jfk_data["adjacency"]
 node_types = _jfk_data["node_types"]
+node_pos = _jfk_data.get("node_positions", {})
 
 # Exclusive nodes are runways (R) and intersections (I) - only one aircraft at a time
 exclusive_nodes = {
@@ -22,6 +23,19 @@ exclusive_nodes = {
 # Non-exclusive nodes are stands (S) - multiple aircraft can wait at stands
 stand_nodes = {node for node, ntype in node_types.items() if ntype == "S"}
 runway_nodes = {node for node, ntype in node_types.items() if ntype == "R"}
+
+# Lazy cache of the compressed weighted graph used for path planning.
+# Built on first access so module import stays cheap.
+_compressed_graph_cache = None
+
+
+def get_compressed_graph():
+    'Return the haversine-weighted, intersection-compressed graph (cached).'
+    global _compressed_graph_cache
+    if _compressed_graph_cache is None:
+        weighted = build_weighted_graph(graph, node_pos)
+        _compressed_graph_cache = compress_graph(weighted, node_types)
+    return _compressed_graph_cache
 
 
 def draw_graph(adjacency, pos, node_types=None, label_nodes=False):

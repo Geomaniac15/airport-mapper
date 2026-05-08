@@ -8,24 +8,18 @@ import sys
 
 import matplotlib.pyplot as plt
 
-from airport_mapper.graph import (build_weighted_graph, compress_graph,
-                                  draw_graph, exclusive_nodes, graph,
+from airport_mapper.graph import (draw_graph, exclusive_nodes,
+                                  get_compressed_graph, graph, node_pos,
                                   node_types, plot_route)
 from airport_mapper.models import Aircraft, Node
 from airport_mapper.planning import collect_proposals, dijkstra_path
 from airport_mapper.polyline_to_graph import haversine_m
 from airport_mapper.rules import (block_reason, commit_moves, is_blocked,
                                   resolve_conflicts)
-from airport_mapper.scenarios import SCENARIOS
+from airport_mapper.scenarios import (SCENARIOS, random_arrivals,
+                                      random_departures, random_mixed)
 
-# Load node positions from graph file
-HERE = os.path.dirname(__file__)
-with open(os.path.join(HERE, "jfk_graph_labeled.json"), "r") as f:
-    graph_data = json.load(f)
-    node_pos = graph_data.get("node_positions", {})
-
-weighted_graph = build_weighted_graph(graph, node_pos)
-compressed_graph = compress_graph(weighted_graph, node_types)
+compressed_graph = get_compressed_graph()
 
 
 def loc(ac):
@@ -272,6 +266,33 @@ def parse_args(argv=None):
         default=4,
         help='frames per simulation tick for smoother motion (default: 4)',
     )
+
+    random_group = parser.add_argument_group('random scenario generation')
+    random_group.add_argument(
+        '--random-departures',
+        type=int,
+        metavar='N',
+        help='generate N random stand-to-runway departures (overrides --scenario)',
+    )
+    random_group.add_argument(
+        '--random-arrivals',
+        type=int,
+        metavar='N',
+        help='generate N random runway-to-stand arrivals (overrides --scenario)',
+    )
+    random_group.add_argument(
+        '--random-mixed',
+        type=int,
+        metavar='N',
+        help='generate N alternating departures and arrivals (overrides --scenario)',
+    )
+    random_group.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help='RNG seed for reproducible random scenarios',
+    )
+
     return parser.parse_args(argv)
 
 
@@ -289,13 +310,40 @@ def main(argv=None):
         list_scenarios()
         return 0
 
-    if args.scenario not in SCENARIOS:
-        print(f"error: unknown scenario '{args.scenario}'", file=sys.stderr)
-        print('run with --list to see available scenarios.', file=sys.stderr)
+    random_flags = [
+        ('random_departures', args.random_departures, random_departures),
+        ('random_arrivals', args.random_arrivals, random_arrivals),
+        ('random_mixed', args.random_mixed, random_mixed),
+    ]
+    active_random = [(name, n, fn) for name, n, fn in random_flags if n is not None]
+
+    if len(active_random) > 1:
+        print(
+            'error: --random-departures, --random-arrivals, and --random-mixed '
+            'are mutually exclusive.',
+            file=sys.stderr,
+        )
         return 2
 
-    scenario = SCENARIOS[args.scenario]
-    print(f"running scenario: {args.scenario} ({len(scenario)} aircraft)\n")
+    if active_random:
+        kind, n, fn = active_random[0]
+        try:
+            scenario = fn(n, seed=args.seed)
+        except ValueError as e:
+            print(f'error generating random scenario: {e}', file=sys.stderr)
+            return 2
+        seed_suffix = f' seed={args.seed}' if args.seed is not None else ''
+        scenario_label = f'{kind}({n}){seed_suffix}'
+    else:
+        if args.scenario not in SCENARIOS:
+            print(f"error: unknown scenario '{args.scenario}'", file=sys.stderr)
+            print('run with --list to see available scenarios.', file=sys.stderr)
+            return 2
+        scenario = SCENARIOS[args.scenario]
+        scenario_label = args.scenario
+
+    args.scenario = scenario_label
+    print(f"running scenario: {scenario_label} ({len(scenario)} aircraft)\n")
 
     result = run_scenario(scenario, max_steps=args.max_steps)
 

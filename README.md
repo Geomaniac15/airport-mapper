@@ -12,6 +12,12 @@ This is a simulation and research exploration only. It is **not** intended for r
 
 ---
 
+![Ten aircraft taxiing across the JFK graph from random starting stands](demo_stress.gif)
+
+*10 aircraft for departure, completed in 43 steps, zero deadlocks, but 5 of the 10 got priority-blocked at intersections at some point (A3 waited a maximum of 3 ticks, A6 and A8 each waited 2).*
+
+---
+
 ## Motivation
 
 Modern aircraft can autoland reliably, but ground movement (taxiing) remains operationally complex and heavily dependent on human controllers and procedural separation.
