@@ -6,29 +6,82 @@ import matplotlib.pyplot as plt
 
 from airport_mapper.polyline_to_graph import haversine_m
 
-# Load JFK graph from JSON
 HERE = os.path.dirname(__file__)
-with open(os.path.join(HERE, "jfk_graph_labeled.json"), "r", encoding="utf-8") as f:
-    _jfk_data = json.load(f)
+AIRPORTS_DIR = os.path.join(HERE, 'airports')
+DEFAULT_IATA = 'JFK'
 
-graph = _jfk_data["adjacency"]
-node_types = _jfk_data["node_types"]
-node_pos = _jfk_data.get("node_positions", {})
-
-# Exclusive nodes are runways (R) and intersections (I) - only one aircraft at a time
-exclusive_nodes = {
-    node for node, ntype in node_types.items() if ntype in {"R", "I", "H"}
-}
-
-# Non-exclusive nodes are stands (S) - multiple aircraft can wait at stands
-stand_nodes = {node for node, ntype in node_types.items() if ntype == "S"}
-runway_nodes = {node for node, ntype in node_types.items() if ntype == "R"}
+# These globals are bound by load_airport(). Defaults are filled in at the
+# bottom of this module via load_airport(DEFAULT_IATA) so existing code that
+# imports `graph`, `node_types`, etc. continues to work unchanged.
+graph = None
+node_types = None
+node_pos = None
+exclusive_nodes = None
+stand_nodes = None
+runway_nodes = None
+current_iata = None
 
 # Lazy cache of the compressed weighted graph used for path planning.
-# Built on first access so module import stays cheap. Also caches the chain
-# expansion mapping so callers can recover the raw-node path after planning.
+# Invalidated whenever the airport changes.
 _compressed_graph_cache = None
 _compressed_chains_cache = None
+
+
+def _airport_path(iata):
+    return os.path.join(AIRPORTS_DIR, f'{iata.upper()}.json')
+
+
+def available_airports():
+    'List IATA codes for which a labelled graph file is present on disk.'
+    if not os.path.isdir(AIRPORTS_DIR):
+        return []
+    return sorted(
+        os.path.splitext(f)[0]
+        for f in os.listdir(AIRPORTS_DIR)
+        if f.endswith('.json') and not f.endswith('.overpass.json')
+    )
+
+
+def load_airport(iata):
+    '''Bind module-level graph globals to the given airport.
+
+    Reads airports/<IATA>.json (created by polyline_to_graph.build_airport_graph)
+    and rebinds graph, node_types, node_pos, the node-class sets, and the
+    compressed-graph caches.
+    '''
+    global graph, node_types, node_pos
+    global exclusive_nodes, stand_nodes, runway_nodes
+    global current_iata
+    global _compressed_graph_cache, _compressed_chains_cache
+
+    iata = iata.upper()
+    path = _airport_path(iata)
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"No graph file for {iata!r} at {path}. "
+            f"Build it first with: "
+            f"python -m airport_mapper.polyline_to_graph --iata {iata}"
+        )
+
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    graph = data['adjacency']
+    node_types = data['node_types']
+    node_pos = data.get('node_positions', {})
+
+    # Exclusive nodes: runways, intersections, holding positions.
+    exclusive_nodes = {
+        n for n, t in node_types.items() if t in {'R', 'I', 'H'}
+    }
+    stand_nodes = {n for n, t in node_types.items() if t == 'S'}
+    runway_nodes = {n for n, t in node_types.items() if t == 'R'}
+
+    current_iata = iata
+
+    # Invalidate compressed caches so next access rebuilds for this airport.
+    _compressed_graph_cache = None
+    _compressed_chains_cache = None
 
 
 def _build_compressed_cache():
@@ -208,6 +261,84 @@ def compress_graph(graph_w, node_types, return_chains=False):
     return new_graph
 
 
+def connected_components(adjacency=None):
+    '''Return a list of node sets, one per connected component.
+
+    Defaults to the currently loaded airport's raw graph.
+    '''
+    if adjacency is None:
+        adjacency = graph
+    seen = set()
+    components = []
+    for start in adjacency:
+        if start in seen:
+            continue
+        comp = set()
+        stack = [start]
+        while stack:
+            n = stack.pop()
+            if n in comp:
+                continue
+            comp.add(n)
+            for nbr in adjacency[n]:
+                if nbr not in comp:
+                    stack.append(nbr)
+        seen |= comp
+        components.append(comp)
+    return components
+
+
+def operational_component():
+    '''Return the largest connected component that contains BOTH stands and
+    runways.
+
+    Useful for filtering random scenario generation when an airport's OSM
+    data has disconnected satellite stands or apron islands.
+    '''
+    components = connected_components()
+    best = None
+    best_score = -1
+    for comp in components:
+        s = len(comp & stand_nodes)
+        r = len(comp & runway_nodes)
+        # Score by stands * runways so a component with both wins.
+        score = s * r
+        if score > best_score:
+            best_score = score
+            best = comp
+    if best is None or best_score == 0:
+        # Degenerate: no component has both. Return the largest one anyway
+        # so callers get something usable.
+        return max(components, key=len) if components else set()
+    return best
+
+
+def airport_summary():
+    'Print a structural summary of the currently loaded airport.'
+    components = connected_components()
+    components.sort(key=len, reverse=True)
+    print(f'== {current_iata} ==')
+    print(f'total nodes: {len(graph)}')
+    print(f'edges: {sum(len(v) for v in graph.values()) // 2}')
+    print(f'connected components: {len(components)}')
+    print(f'stands: {len(stand_nodes)}, runways: {len(runway_nodes)}, '
+          f'holding: {sum(1 for t in node_types.values() if t == "H")}')
+
+    main = operational_component()
+    main_s = len(main & stand_nodes)
+    main_r = len(main & runway_nodes)
+    print(f'\noperational component: {len(main)} nodes, '
+          f'{main_s}/{len(stand_nodes)} stands, '
+          f'{main_r}/{len(runway_nodes)} runways')
+
+    print('\ntop components by size:')
+    for i, comp in enumerate(components[:8]):
+        s = len(comp & stand_nodes)
+        r = len(comp & runway_nodes)
+        flag = ' (operational)' if comp is main else ''
+        print(f'  [{i}] {len(comp):>5} nodes, {s:>3} stands, {r:>3} runways{flag}')
+
+
 def expand_compressed_path(compressed_path, chains):
     '''Expand a path on the compressed graph back to the full raw path.
 
@@ -226,3 +357,8 @@ def expand_compressed_path(compressed_path, chains):
         raw.extend(chain)
         raw.append(v)
     return raw
+
+
+# Bind the default airport at module load. Existing imports of graph,
+# node_types, node_pos etc. work unchanged.
+load_airport(DEFAULT_IATA)

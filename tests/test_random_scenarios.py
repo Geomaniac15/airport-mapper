@@ -297,7 +297,8 @@ def test_random_10_simulation_completes(seed):
 
 def test_random_10_seed5_documents_known_deadlock():
     'Documented finding: 10 aircraft, seed=5, stagger=0 reliably deadlocks '
-    'on raw-graph paths. Only a very large stagger (>=400) rescues it.'
+    'on raw-graph paths over the operational component. Only a very large '
+    'stagger (>=1500) rescues it.'
     s = random_departures(10, seed=5)
     result = run_scenario(s, max_steps=500)
     assert result['deadlock'] is True
@@ -318,8 +319,8 @@ def test_random_10_seed2_documents_persistent_deadlock():
 
 def test_huge_stagger_resolves_seed5_deadlock():
     'Seed=5 is rescuable, but only with a very large stagger window.'
-    s = random_departures(10, seed=5, stagger=400)
-    result = run_scenario(s, max_steps=1000)
+    s = random_departures(10, seed=5, stagger=1500)
+    result = run_scenario(s, max_steps=2500)
     assert not result['deadlock']
 
 

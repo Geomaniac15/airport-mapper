@@ -164,15 +164,35 @@ Full flag reference: `python -m airport_mapper.main_sim --help`
 python -m pytest tests/
 ```
 
-### Rebuilding the JFK graph
+### Multi-airport support
 
-The labelled JFK graph (`airport_mapper/jfk_graph_labeled.json`) is treated as a versioned build artifact. If you change the OSM input or the labelling logic, regenerate it with:
+Airport graphs live in `airport_mapper/airports/`, one JSON per IATA code. JFK ships with the project; other airports are fetched and built on demand from OpenStreetMap via the Overpass API.
+
+To run on a new airport:
 
 ```bash
-python -m airport_mapper.polyline_to_graph
+# Fetch the OSM data and build the graph (one-time, requires network)
+python -m airport_mapper.overpass_query LHR
+python -m airport_mapper.polyline_to_graph --iata LHR
+
+# Or do both in one step (build_airport_graph auto-fetches if cache is missing)
+python -m airport_mapper.polyline_to_graph --iata LHR
+
+# Then run a simulation on it
+python -m airport_mapper.main_sim --iata LHR --random-departures 10 --animate
 ```
 
-Importing the package no longer triggers a rebuild.
+The `--iata` flag accepts any airport code with `aeroway=aerodrome` and an `iata` tag in OSM. Note that the named scenarios in `scenarios.py` use JFK-specific node IDs and only work for JFK; for other airports use `--random-departures`, `--random-arrivals`, or `--random-mixed`.
+
+### Rebuilding the JFK graph
+
+The labelled JFK graph (`airport_mapper/airports/JFK.json`) is a versioned build artifact. If the OSM data changes or the labelling logic is updated:
+
+```bash
+python -m airport_mapper.polyline_to_graph --iata JFK --no-fetch
+```
+
+Importing the package never triggers a rebuild.
 
 ### Author
 

@@ -8,10 +8,11 @@ import sys
 
 import matplotlib.pyplot as plt
 
-from airport_mapper.graph import (draw_graph, exclusive_nodes,
+from airport_mapper import graph as graph_module
+from airport_mapper.graph import (airport_summary, draw_graph,
                                   expand_compressed_path,
                                   get_compressed_chains, get_compressed_graph,
-                                  graph, node_pos, node_types, plot_route)
+                                  load_airport, plot_route)
 from airport_mapper.models import Aircraft, Node
 from airport_mapper.planning import collect_proposals, dijkstra_path
 from airport_mapper.polyline_to_graph import haversine_m
@@ -19,9 +20,6 @@ from airport_mapper.rules import (block_reason, commit_moves, is_blocked,
                                   resolve_conflicts)
 from airport_mapper.scenarios import (SCENARIOS, random_arrivals,
                                       random_departures, random_mixed)
-
-compressed_graph = get_compressed_graph()
-compressed_chains = get_compressed_chains()
 
 
 def loc(ac):
@@ -33,7 +31,10 @@ def loc(ac):
 
 
 def build_nodes():
-    return {name: Node(name, exclusive=(name in exclusive_nodes)) for name in graph}
+    return {
+        name: Node(name, exclusive=(name in graph_module.exclusive_nodes))
+        for name in graph_module.graph
+    }
 
 
 def run_scenario(
@@ -43,6 +44,10 @@ def run_scenario(
     aircraft_list = []
     nodes = build_nodes()
 
+    # Resolve fresh per-call so an --iata switch picks up the new graph.
+    cg = get_compressed_graph()
+    chains = get_compressed_chains()
+
     for spec in scenario:
         start = spec["start"]
         goal = spec["goal"]
@@ -50,13 +55,13 @@ def run_scenario(
 
         # Plan on the compressed graph (cheap), then expand the path back to
         # raw graph nodes so the simulator visits every real intermediate
-        # node and the timeline output matches jfk_graph.json adjacency.
-        compressed_path = dijkstra_path(compressed_graph, start, goal)
+        # node and the timeline output matches the airport's adjacency.
+        compressed_path = dijkstra_path(cg, start, goal)
         if compressed_path is None:
             raise ValueError(
                 f"No path for {spec['aircraft_id']} from {start} to {goal}"
             )
-        path = expand_compressed_path(compressed_path, compressed_chains)
+        path = expand_compressed_path(compressed_path, chains)
 
         ac = Aircraft(
             spec["aircraft_id"],
@@ -195,7 +200,9 @@ def compute_metrics(result):
         else:
             taxi_duration = None
 
-        distance_m = round(get_distance_travelled(positions, node_pos), 1)
+        distance_m = round(
+            get_distance_travelled(positions, graph_module.node_pos), 1
+        )
 
         metrics["aircraft"][a_id] = {
             "time_to_airborne": time_to_airborne,
@@ -266,17 +273,30 @@ DEFAULT_COLOURS = [
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         prog='airport_mapper',
-        description='JFK airport surface movement simulator.',
+        description='Airport surface movement simulator (any IATA airport).',
+    )
+    parser.add_argument(
+        '--iata', '-a',
+        default='JFK',
+        help='IATA airport code to load (default: JFK). Will fetch from '
+             'Overpass and build the graph if not already cached.',
     )
     parser.add_argument(
         '--scenario', '-s',
         default='three_departures',
-        help="scenario key from scenarios.py (default: 'three_departures')",
+        help="scenario key from scenarios.py (default: 'three_departures'). "
+             "Hand-written scenarios are JFK-specific; for other airports "
+             "use --random-departures, --random-arrivals, or --random-mixed.",
     )
     parser.add_argument(
         '--list', '-l',
         action='store_true',
         help='list available scenarios and exit',
+    )
+    parser.add_argument(
+        '--info',
+        action='store_true',
+        help='print connectivity stats for the loaded airport and exit',
     )
     parser.add_argument(
         '--max-steps',
@@ -360,8 +380,32 @@ def list_scenarios():
         print(f'  {name:<22}  {len(spec)} aircraft  ({ids})')
 
 
+def _ensure_airport_loaded(iata):
+    'Load the airport, building it from Overpass if not yet cached.'
+    iata = iata.upper()
+    if graph_module.current_iata == iata:
+        return
+    try:
+        load_airport(iata)
+    except FileNotFoundError:
+        print(
+            f'no cached graph for {iata}; building from Overpass '
+            f'(this requires network access)...',
+            file=sys.stderr,
+        )
+        from airport_mapper.polyline_to_graph import build_airport_graph
+        build_airport_graph(iata, verbose=True)
+        load_airport(iata)
+
+
 def main(argv=None):
     args = parse_args(argv)
+
+    _ensure_airport_loaded(args.iata)
+
+    if args.info:
+        airport_summary()
+        return 0
 
     if args.list:
         list_scenarios()
@@ -431,7 +475,7 @@ def main(argv=None):
         animate_simulation(
             result,
             scenario,
-            node_pos,
+            graph_module.node_pos,
             save_path=args.save_gif,
             fps=args.fps,
             sub_frames=args.sub_frames,
@@ -439,19 +483,22 @@ def main(argv=None):
         )
         return 0
 
-    draw_graph(graph, node_pos, node_types=node_types)
+    draw_graph(
+        graph_module.graph, graph_module.node_pos,
+        node_types=graph_module.node_types,
+    )
 
     colour_cycle = itertools.cycle(DEFAULT_COLOURS)
     colours = {spec['aircraft_id']: next(colour_cycle) for spec in scenario}
 
     for i, spec in enumerate(scenario):
         ac_id = spec['aircraft_id']
-        path = dijkstra_path(compressed_graph, spec['start'], spec['goal'])
+        path = dijkstra_path(get_compressed_graph(), spec['start'], spec['goal'])
         if path is None:
             continue
         plot_route(
             path,
-            node_pos,
+            graph_module.node_pos,
             color=colours[ac_id],
             label=ac_id,
             offset_index=i,

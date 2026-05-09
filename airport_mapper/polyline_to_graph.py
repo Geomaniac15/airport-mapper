@@ -1,12 +1,13 @@
+import argparse
 import json
 import math
 import os
+import sys
 
 from airport_mapper.coord_graph import build_graph_from_polylines
 
-# from airport_mapper.graph import draw_graph
-
-FILE = "airport_mapper/jfk_graph_labeled.json"
+HERE = os.path.dirname(__file__)
+AIRPORTS_DIR = os.path.join(HERE, 'airports')
 
 EDGE_AEROWAYS = {"taxiway", "taxilane", "runway", "apron"}
 STAND_AEROWAYS = {"gate", "parking_position", "stand"}
@@ -215,14 +216,29 @@ def extract_polylines(overpass_json, aeroway_types=None, decimals=5):
 # # n = next(iter(graph))
 # # print(f'sample node: {n}, degree {len(graph[n])}')
 
-def build_jfk_graph(verbose=True):
-    """Rebuild jfk_graph_labeled.json from overpass_data.json.
+def build_airport_graph(iata, verbose=True, fetch_if_missing=True):
+    '''Rebuild airports/<IATA>.json from airports/<IATA>.overpass.json.
 
-    Only intended to be called when the underlying OSM data changes.
-    Importing this module no longer triggers a rebuild.
-    """
-    here = os.path.dirname(__file__)
-    with open(os.path.join(here, "overpass_data.json"), "r", encoding="utf-8") as f:
+    If the Overpass JSON is missing and fetch_if_missing is True, fetch it
+    via the Overpass API first. Only intended to be called when the
+    underlying OSM data changes (or for a new airport).
+    '''
+    iata = iata.upper()
+    os.makedirs(AIRPORTS_DIR, exist_ok=True)
+    overpass_path = os.path.join(AIRPORTS_DIR, f'{iata}.overpass.json')
+    out_path = os.path.join(AIRPORTS_DIR, f'{iata}.json')
+
+    if not os.path.exists(overpass_path):
+        if not fetch_if_missing:
+            raise FileNotFoundError(
+                f'No Overpass cache for {iata} at {overpass_path}'
+            )
+        if verbose:
+            print(f'fetching Overpass data for {iata}...')
+        from airport_mapper.overpass_query import fetch_airport
+        fetch_airport(iata, save_to=overpass_path, verbose=verbose)
+
+    with open(overpass_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     tagged_polylines = extract_polylines(
@@ -266,35 +282,57 @@ def build_jfk_graph(verbose=True):
     for node in snapped_holding_pts.values():
         node_type[node] = "H"
 
+    bridges = bridge_isolated_components(
+        graph_typed, node_pos, node_type, max_dist_m=400, verbose=verbose,
+    )
+
     out = {
-        "adjacency": graph_to_adjacency(graph_typed),
-        "node_positions": node_pos,
-        "node_types": node_type,
-        "edge_types": {
+        'iata': iata,
+        'adjacency': graph_to_adjacency(graph_typed),
+        'node_positions': node_pos,
+        'node_types': node_type,
+        'bridges_added': bridges,
+        'edge_types': {
             n: {nbr: sorted(types) for nbr, types in nbrs.items()}
             for n, nbrs in graph_typed.items()
         },
     }
 
-    with open(FILE, "w", encoding="utf-8") as f:
+    with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(out, f, indent=2)
 
     if verbose:
-        counts = {"R": 0, "S": 0, "I": 0}
+        counts = {}
         for t in node_type.values():
             counts[t] = counts.get(t, 0) + 1
-        print(f"candidate nodes (taxilane-adjacent): {len(candidates)}")
-        print(f"polylines: {len(tagged_polylines)}")
-        print(f"nodes: {len(out['adjacency'])}")
-        print(f"edges: {sum(len(v) for v in out['adjacency'].values()) // 2}")
-        print(f"node type counts: {counts}")
-        print(f"wrote to: {FILE}")
-        print(f"stand points (OSM): {len(stand_points)}")
-        print(f"snapped to graph: {len(snapped)}")
-        print(f"unique S nodes: {len(set(snapped.values()))}")
+        print(f'[{iata}] candidate nodes (taxilane-adjacent): {len(candidates)}')
+        print(f'[{iata}] polylines: {len(tagged_polylines)}')
+        print(f'[{iata}] nodes: {len(out["adjacency"])}')
+        print(f'[{iata}] edges: {sum(len(v) for v in out["adjacency"].values()) // 2}')
+        print(f'[{iata}] node type counts: {counts}')
+        print(f'[{iata}] stand points (OSM): {len(stand_points)}')
+        print(f'[{iata}] snapped stands: {len(snapped)}, holding pts: {len(snapped_holding_pts)}')
+        print(f'[{iata}] wrote: {out_path}')
 
     return out
 
 
-if __name__ == "__main__":
-    build_jfk_graph()
+def _main(argv=None):
+    parser = argparse.ArgumentParser(
+        description='Build airports/<IATA>.json from Overpass data.',
+    )
+    parser.add_argument(
+        '--iata', '-i', default='JFK',
+        help='IATA airport code to (re)build (default: JFK)',
+    )
+    parser.add_argument(
+        '--no-fetch', action='store_true',
+        help='do not call Overpass; require airports/<IATA>.overpass.json on disk',
+    )
+    args = parser.parse_args(argv)
+    build_airport_graph(args.iata, fetch_if_missing=not args.no_fetch)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(_main())

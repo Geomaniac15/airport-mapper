@@ -53,20 +53,33 @@ def _aircraft_id(i):
 
 
 def _generate_pairs(starts_pool, goals_pool, n, rng, allow_repeat_starts=False):
-    'Sample n start->goal pairs that have a realisable Dijkstra path.'
+    '''Sample n start->goal pairs that have a realisable Dijkstra path.
 
-    from airport_mapper.graph import get_compressed_graph
+    Filters both pools to the airport's operational component (the largest
+    connected component that contains both stands and runways) so that
+    fragmented OSM graphs like LHR don't fail to find paths.
+    '''
+
+    from airport_mapper.graph import get_compressed_graph, operational_component
     from airport_mapper.planning import dijkstra_path
 
     compressed = get_compressed_graph()
+    op = operational_component()
 
-    starts = sorted(starts_pool)
-    goals = sorted(goals_pool)
+    # Restrict to the operational component. Compressed graph nodes that
+    # remain after compression are a subset of raw nodes; we want both the
+    # raw membership AND that the node survives compression as a planning
+    # endpoint.
+    starts = sorted(s for s in starts_pool if s in op and s in compressed)
+    goals = sorted(g for g in goals_pool if g in op and g in compressed)
 
     if not starts or not goals:
         raise ValueError(
             f'cannot generate scenario: '
-            f'{len(starts)} starts, {len(goals)} goals available'
+            f'{len(starts)} starts, {len(goals)} goals reachable in the '
+            f'operational component (out of {len(starts_pool)} stands and '
+            f'{len(goals_pool)} runways total). Inspect connectivity with '
+            f'`python -m airport_mapper.main_sim --iata <CODE> --info`.'
         )
 
     pairs = []
@@ -90,7 +103,8 @@ def _generate_pairs(starts_pool, goals_pool, n, rng, allow_repeat_starts=False):
     if len(pairs) < n:
         raise ValueError(
             f'could only generate {len(pairs)} of {n} requested aircraft '
-            f'after {attempts} attempts (graph connectivity may be sparse)'
+            f'after {attempts} attempts. Operational component has '
+            f'{len(starts)} usable starts and {len(goals)} usable goals.'
         )
 
     return pairs
