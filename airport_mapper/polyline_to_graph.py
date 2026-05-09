@@ -216,6 +216,103 @@ def extract_polylines(overpass_json, aeroway_types=None, decimals=5):
 # # n = next(iter(graph))
 # # print(f'sample node: {n}, degree {len(graph[n])}')
 
+def _connected_components_typed(graph_typed):
+    'Connected components of a typed graph (adjacency: dict[node, dict[node, set]]).'
+    seen = set()
+    comps = []
+    for start in graph_typed:
+        if start in seen:
+            continue
+        comp = set()
+        stack = [start]
+        while stack:
+            n = stack.pop()
+            if n in comp:
+                continue
+            comp.add(n)
+            for nbr in graph_typed[n]:
+                if nbr not in comp:
+                    stack.append(nbr)
+        seen |= comp
+        comps.append(comp)
+    return comps
+
+
+def bridge_isolated_components(graph_typed, node_pos, node_type,
+                               max_dist_m=400, verbose=False):
+    '''Connect components containing operationally relevant nodes (stands,
+    runways, holding points) to the main component via the shortest possible
+    bridge edge.
+
+    OSM apron polygons are often missing the small connector taxilane that
+    physically links them to the main taxiway network, leaving stands as
+    floating islands. This pass closes those gaps with synthetic edges
+    tagged 'bridge'. The number of bridges added is returned.
+    '''
+    OPERATIONAL = {'S', 'R', 'H'}
+
+    components = _connected_components_typed(graph_typed)
+    components.sort(key=len, reverse=True)
+    if not components:
+        return 0
+
+    # Main component is the largest one containing stands+runways. If no
+    # component contains both, fall back to the largest one.
+    def has_both(comp):
+        s = any(node_type.get(n) == 'S' for n in comp)
+        r = any(node_type.get(n) == 'R' for n in comp)
+        return s and r
+
+    main = next((c for c in components if has_both(c)), components[0])
+
+    bridges = 0
+    for comp in components:
+        if comp is main:
+            continue
+        # Skip components without any operationally relevant nodes.
+        relevant = [n for n in comp if node_type.get(n) in OPERATIONAL]
+        if not relevant:
+            continue
+
+        # Find the closest pair (a in comp, b in main).
+        # Restrict to candidates within a bounding box for speed.
+        best = None
+        best_d = float('inf')
+        for a in relevant:
+            ax, ay = node_pos[a]
+            for b in main:
+                bx, by = node_pos[b]
+                # cheap pre-filter on bbox
+                if abs(ax - bx) > 0.01 or abs(ay - by) > 0.01:
+                    continue
+                d = haversine_m((ax, ay), (bx, by))
+                if d < best_d:
+                    best_d = d
+                    best = (a, b)
+        if best is None or best_d > max_dist_m:
+            if verbose:
+                print(
+                    f'  could not bridge component of {len(comp)} nodes '
+                    f'({len(relevant)} relevant); nearest pair {best_d:.0f}m '
+                    f'> {max_dist_m}m'
+                )
+            continue
+
+        a, b = best
+        # Add a synthetic edge in the typed graph.
+        graph_typed[a].setdefault(b, set()).add('bridge')
+        graph_typed[b].setdefault(a, set()).add('bridge')
+        main = main | comp
+        bridges += 1
+        if verbose:
+            print(
+                f'  bridge: {a} <-> {b} ({best_d:.0f}m), merged '
+                f'{len(comp)} nodes into main'
+            )
+
+    return bridges
+
+
 def build_airport_graph(iata, verbose=True, fetch_if_missing=True):
     '''Rebuild airports/<IATA>.json from airports/<IATA>.overpass.json.
 
